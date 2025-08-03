@@ -222,22 +222,29 @@ function Dashboard({ user }) {
     }
 
     try {
+      // First check if tags table exists
+      const { data: tableCheck, error: tableError } = await supabase
+        .from('tags')
+        .select('count')
+        .limit(1)
+
+      if (tableError && tableError.code === '42P01') {
+        showToast('Tags table not set up. Please run the SQL setup first.')
+        setShowDatabaseSetup(true)
+        return
+      }
+
       const { error } = await supabase
         .from('tags')
-        .insert([{ 
-          ...newTag, 
+        .insert([{
+          ...newTag,
           user_id: user.id,
           name: newTag.name.trim()
         }])
 
       if (error) {
         console.error('Error adding tag:', error)
-        if (error.code === '42P01') {
-          showToast('Database table not set up. Please run the SQL setup.')
-          setShowDatabaseSetup(true)
-        } else {
-          showToast('Failed to add tag. Please try again.')
-        }
+        showToast('Failed to add tag. Please try again.')
         return
       }
 
@@ -478,7 +485,7 @@ function Dashboard({ user }) {
                          internship.role.toLowerCase().includes(searchTerm.toLowerCase())
     const matchesStatus = statusFilter === 'all' || internship.status === statusFilter
     const matchesLocation = locationFilter === 'all' || internship.location === locationFilter
-    const matchesTags = selectedTags.length === 0 || selectedTags.some(tag => 
+    const matchesTags = selectedTags.length === 0 || selectedTags.some(tag =>
       internship.tags && internship.tags.includes(tag)
     )
 
@@ -537,8 +544,8 @@ function Dashboard({ user }) {
             <button
               onClick={() => setDragMode(!dragMode)}
               className={`flex items-center space-x-2 px-3 py-2 rounded-lg transition-colors ${
-                dragMode 
-                  ? 'bg-primary-100 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300' 
+                dragMode
+                  ? 'bg-primary-100 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300'
                   : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
               }`}
               title={dragMode ? 'Exit reorder mode' : 'Reorder internships'}
@@ -550,7 +557,7 @@ function Dashboard({ user }) {
               onClick={() => setViewMode(viewMode === 'card' ? 'table' : 'card')}
               className={`flex items-center space-x-2 px-3 py-2 rounded-lg transition-colors ${
                 viewMode === 'card'
-                  ? 'bg-primary-100 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300' 
+                  ? 'bg-primary-100 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300'
                   : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
               }`}
               title={viewMode === 'card' ? 'Switch to table view' : 'Switch to card view'}
@@ -594,7 +601,7 @@ function Dashboard({ user }) {
               </button>
             )}
           </div>
-          
+
           <div className="space-y-4">
             {/* Search and Basic Filters */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -672,12 +679,12 @@ function Dashboard({ user }) {
                   <button
                     key={tag.name}
                     onClick={() => toggleTag(tag.name)}
-                    className={`flex items-center space-x-2 px-3 py-2 rounded-full text-sm font-medium transition-all duration-200 ${
+                    className={`group relative flex items-center space-x-2 px-3 py-2 rounded-full text-sm font-medium transition-all duration-200 ${
                       selectedTags.includes(tag.name)
                         ? 'text-white shadow-md'
                         : 'hover:shadow-sm'
                     }`}
-                    style={{ 
+                    style={{
                       backgroundColor: selectedTags.includes(tag.name) ? tag.color : `${tag.color}20`,
                       color: selectedTags.includes(tag.name) ? 'white' : tag.color,
                       border: `1px solid ${tag.color}40`
@@ -685,6 +692,11 @@ function Dashboard({ user }) {
                   >
                     <Tag className="h-3 w-3" />
                     <span className="font-medium">{tag.name}</span>
+                    {selectedTags.includes(tag.name) && (
+                      <div className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                        <X className="h-2.5 w-2.5 text-white" />
+                      </div>
+                    )}
                   </button>
                 ))}
               </div>
@@ -763,177 +775,99 @@ function Dashboard({ user }) {
           />
         )}
 
-        {/* Pagination */}
-        {filteredInternships.length > 0 && (
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
-            <div className="flex items-center space-x-4">
-              <span className="text-sm text-gray-600 dark:text-gray-400">
-                Showing {startIndex + 1}-{Math.min(endIndex, filteredInternships.length)} of {filteredInternships.length} results
-              </span>
-              <div className="flex items-center space-x-2">
-                <span className="text-sm text-gray-600 dark:text-gray-400">Show:</span>
-                <select
-                  value={itemsPerPage}
-                  onChange={(e) => handleItemsPerPageChange(parseInt(e.target.value))}
-                  className="text-sm border border-gray-300 dark:border-gray-600 rounded px-2 py-1 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+        {/* Add Internship Modal */}
+        {showAddModal && (
+          <AddInternshipModal
+            onClose={() => setShowAddModal(false)}
+            onAdd={addInternship}
+          />
+        )}
+
+        {/* Add Tag Modal */}
+        {showAddTagModal && (
+          <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
+            <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-xl max-w-md w-full mx-4">
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                  Add Custom Tag
+                </h3>
+                <button
+                  onClick={() => {
+                    setShowAddTagModal(false)
+                    setNewTag({ name: '', color: '#6b7280' })
+                  }}
+                  className="p-2 text-gray-400 hover:text-gray-600 transition-colors"
                 >
-                  <option value={5}>5</option>
-                  <option value={10}>10</option>
-                  <option value={20}>20</option>
-                  <option value={50}>50</option>
-                </select>
-                <span className="text-sm text-gray-600 dark:text-gray-400">per page</span>
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Tag Name
+                  </label>
+                  <input
+                    type="text"
+                    value={newTag.name}
+                    onChange={(e) => setNewTag({ ...newTag, name: e.target.value })}
+                    className="input-field"
+                    placeholder="e.g., Dream Company, Priority"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Color
+                  </label>
+                  <input
+                    type="color"
+                    value={newTag.color}
+                    onChange={(e) => setNewTag({ ...newTag, color: e.target.value })}
+                    className="w-full h-10 rounded-lg border border-gray-300 dark:border-gray-600"
+                  />
+                </div>
+              </div>
+
+              <div className="flex space-x-3 mt-6">
+                <button
+                  onClick={() => {
+                    setShowAddTagModal(false)
+                    setNewTag({ name: '', color: '#6b7280' })
+                  }}
+                  className="btn-secondary flex-1"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={addTag}
+                  disabled={!newTag.name.trim()}
+                  className="btn-primary flex-1 disabled:opacity-50"
+                >
+                  Add Tag
+                </button>
               </div>
             </div>
-
-            {totalPages > 1 && (
-              <div className="flex items-center space-x-2">
-                <button
-                  onClick={() => handlePageChange(currentPage - 1)}
-                  disabled={currentPage === 1}
-                  className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 disabled:opacity-50 disabled:cursor-not-allowed"
-                  title="Previous page"
-                >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                  </svg>
-                </button>
-
-                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                  let pageNum
-                  if (totalPages <= 5) {
-                    pageNum = i + 1
-                  } else if (currentPage <= 3) {
-                    pageNum = i + 1
-                  } else if (currentPage >= totalPages - 2) {
-                    pageNum = totalPages - 4 + i
-                  } else {
-                    pageNum = currentPage - 2 + i
-                  }
-
-                  return (
-                    <button
-                      key={pageNum}
-                      onClick={() => handlePageChange(pageNum)}
-                      className={`px-3 py-1 text-sm rounded ${
-                        currentPage === pageNum
-                          ? 'bg-primary-600 text-white'
-                          : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-700'
-                      }`}
-                    >
-                      {pageNum}
-                    </button>
-                  )
-                })}
-
-                <button
-                  onClick={() => handlePageChange(currentPage + 1)}
-                  disabled={currentPage === totalPages}
-                  className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 disabled:opacity-50 disabled:cursor-not-allowed"
-                  title="Next page"
-                >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                  </svg>
-                </button>
-              </div>
-            )}
           </div>
         )}
+
+        {/* Database Setup Modal */}
+        {showDatabaseSetup && (
+          <DatabaseSetup
+            onClose={() => setShowDatabaseSetup(false)}
+          />
+        )}
+
+        {/* Toast */}
+        <Toast
+          message={toast.message}
+          isVisible={toast.show}
+          type={toast.type}
+          onClose={() => setToast({ show: false, message: '', type: 'success' })}
+        />
       </div>
-
-      {/* Add Internship Modal */}
-      {showAddModal && (
-        <AddInternshipModal
-          onClose={() => setShowAddModal(false)}
-          onAdd={addInternship}
-        />
-      )}
-
-      {/* Add Tag Modal */}
-      {showAddTagModal && (
-        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
-          <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-xl max-w-md w-full mx-4">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                Add Custom Tag
-              </h3>
-              <button
-                onClick={() => {
-                  setShowAddTagModal(false)
-                  setNewTag({ name: '', color: '#6b7280' })
-                }}
-                className="p-2 text-gray-400 hover:text-gray-600 transition-colors"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Tag Name
-                </label>
-                <input
-                  type="text"
-                  value={newTag.name}
-                  onChange={(e) => setNewTag({ ...newTag, name: e.target.value })}
-                  className="input-field"
-                  placeholder="e.g., Dream Company, Priority"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Color
-                </label>
-                <input
-                  type="color"
-                  value={newTag.color}
-                  onChange={(e) => setNewTag({ ...newTag, color: e.target.value })}
-                  className="w-full h-10 rounded-lg border border-gray-300 dark:border-gray-600"
-                />
-              </div>
-            </div>
-
-            <div className="flex space-x-3 mt-6">
-              <button
-                onClick={() => {
-                  setShowAddTagModal(false)
-                  setNewTag({ name: '', color: '#6b7280' })
-                }}
-                className="btn-secondary flex-1"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={addTag}
-                disabled={!newTag.name.trim()}
-                className="btn-primary flex-1 disabled:opacity-50"
-              >
-                Add Tag
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Database Setup Modal */}
-      {showDatabaseSetup && (
-        <DatabaseSetup
-          onClose={() => setShowDatabaseSetup(false)}
-        />
-      )}
-
-      {/* Toast */}
-      <Toast
-        message={toast.message}
-        isVisible={toast.show}
-        type={toast.type}
-        onClose={() => setToast({ show: false, message: '', type: 'success' })}
-      />
     </div>
   )
 }
 
-export default Dashboard 
+export default Dashboard

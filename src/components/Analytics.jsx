@@ -177,6 +177,30 @@ function Analytics({ internships, onAddInternship }) {
             </div>
           </div>
         )}
+
+        {/* Additional stats below the chart */}
+        {totalInternships > 0 && (
+          <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="text-center p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                <div className="text-lg font-bold text-gray-900 dark:text-gray-100">
+                  {recentApplications}
+                </div>
+                <div className="text-xs text-gray-500 dark:text-gray-400">
+                  Recent Apps
+                </div>
+              </div>
+              <div className="text-center p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                <div className="text-lg font-bold text-gray-900 dark:text-gray-100">
+                  {remoteCount}
+                </div>
+                <div className="text-xs text-gray-500 dark:text-gray-400">
+                  Remote Jobs
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
       )}
 
@@ -241,4 +265,4 @@ function Analytics({ internships, onAddInternship }) {
   )
 }
 
-export default Analytics 
+export default Analytics

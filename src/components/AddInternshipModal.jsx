@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { X, Building, User, MapPin, Calendar, FileText, Tag, Upload, DollarSign, Download, Trash2 } from 'lucide-react'
+import { X, Building, User, MapPin, Calendar, FileText, Tag, Upload, DollarSign, Download, Trash2, ChevronDown } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 
 function AddInternshipModal({ onClose, onAdd }) {
@@ -20,7 +20,7 @@ function AddInternshipModal({ onClose, onAdd }) {
   const [availableTags, setAvailableTags] = useState([])
   const [uploadedFiles, setUploadedFiles] = useState([])
   const [fileUploading, setFileUploading] = useState(false)
-  
+
   const fileInputRef = useRef(null)
 
   // Predefined tags
@@ -36,26 +36,43 @@ function AddInternshipModal({ onClose, onAdd }) {
   useEffect(() => {
     setIsVisible(true)
     setAvailableTags(predefinedTags)
-    
-    // Debug: List available buckets
-    const listBuckets = async () => {
-      const { data, error } = await supabase.storage.listBuckets()
-      if (error) {
-        console.error('Error listing buckets:', error)
-      } else {
-        console.log('Available buckets:', data)
-        
-        // If no buckets found, show instructions
-        if (data.length === 0) {
-          console.log('No buckets found. Please create the bucket manually in Supabase Dashboard.')
-          console.log('1. Go to Supabase Dashboard > Storage')
-          console.log('2. Create bucket named "internship-files"')
-          console.log('3. Set it to public')
-          console.log('4. Run the RLS policies from DatabaseSetup modal')
+
+    // Check if bucket exists, if not create it
+    const checkAndCreateBucket = async () => {
+      try {
+        // First check if bucket exists
+        const { data: buckets, error: listError } = await supabase.storage.listBuckets()
+
+        if (listError) {
+          console.error('Error listing buckets:', listError)
+          return
         }
+
+        const bucketExists = buckets.some(bucket => bucket.name === 'internship-files')
+
+        if (!bucketExists) {
+          console.log('Creating internship-files bucket...')
+          const { error: createError } = await supabase.storage.createBucket('internship-files', {
+            public: true,
+            allowedMimeTypes: ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'text/plain'],
+            fileSizeLimit: 10485760 // 10MB
+          })
+
+          if (createError) {
+            console.error('Error creating bucket:', createError)
+            alert('Please create the storage bucket manually in Supabase Dashboard:\n1. Go to Storage\n2. Create bucket named "internship-files"\n3. Set it to public')
+          } else {
+            console.log('Bucket created successfully')
+          }
+        } else {
+          console.log('Bucket already exists')
+        }
+      } catch (error) {
+        console.error('Error checking/creating bucket:', error)
       }
     }
-    listBuckets()
+
+    checkAndCreateBucket()
   }, [])
 
   // Auto-save to localStorage
@@ -73,92 +90,45 @@ function AddInternshipModal({ onClose, onAdd }) {
   const handleFileUpload = async (event) => {
     const files = Array.from(event.target.files)
     setFileUploading(true)
-    
+
     try {
       const uploadedFileUrls = []
-      
+
       for (const file of files) {
         if (file.size > 10 * 1024 * 1024) { // 10MB limit
           alert(`File ${file.name} is too large. Maximum size is 10MB.`)
           continue
         }
-        
+
         const fileExt = file.name.split('.').pop()
         const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`
-        
+
         console.log('Attempting to upload to bucket: internship-files')
-        
-        // First, let's check what files are in the bucket
-        const { data: listData, error: listError } = await supabase.storage
-          .from('internship-files')
-          .list()
-        
-        if (listError) {
-          console.error('Error listing files in bucket:', listError)
-        } else {
-          console.log('Files in bucket:', listData)
-        }
-        
-        // Upload to Supabase Storage
+
         const { data, error } = await supabase.storage
           .from('internship-files')
           .upload(fileName, file)
-        
+
         if (error) {
           console.error('Error uploading file:', error)
-          alert(`Failed to upload ${file.name}: ${error.message}`)
+          alert(`Error uploading ${file.name}: ${error.message}`)
           continue
         }
-        
-        console.log('Upload successful, getting public URL...')
-        
-        // Get the public URL - use the correct bucket name
-        const { data: { publicUrl } } = supabase.storage
+
+        // Get the public URL
+        const { data: urlData } = supabase.storage
           .from('internship-files')
           .getPublicUrl(fileName)
-        
-        console.log('Uploaded file:', fileName, 'URL:', publicUrl)
-        
-        // Also try constructing the URL manually
-        const supabaseUrl = supabase.supabaseUrl
-        const manualUrl = `${supabaseUrl}/storage/v1/object/public/internship-files/${fileName}`
-        console.log('Manual URL:', manualUrl)
-        
-        // Try getting a signed URL as alternative
-        const { data: signedUrlData, error: signedUrlError } = await supabase.storage
-          .from('internship-files')
-          .createSignedUrl(fileName, 3600) // 1 hour expiry
-        
-        if (signedUrlError) {
-          console.error('Error getting signed URL:', signedUrlError)
-        } else {
-          console.log('Signed URL:', signedUrlData.signedUrl)
-        }
-        
-        // Test the signed URL to see if it's accessible
-        if (signedUrlData?.signedUrl) {
-          try {
-            const response = await fetch(signedUrlData.signedUrl, { method: 'HEAD' })
-            console.log('Signed URL accessibility test:', response.status, response.ok)
-          } catch (error) {
-            console.error('Signed URL test failed:', error)
-          }
-        }
-        
-        // Always use signed URL if available, otherwise fall back to public URL
-        const finalUrl = signedUrlData?.signedUrl || publicUrl || manualUrl
-        console.log('Final URL to be used:', finalUrl)
-        
+
         uploadedFileUrls.push({
           name: file.name,
           size: file.size,
           type: file.type,
-          url: finalUrl,
-          path: fileName,
-          signedUrl: signedUrlData?.signedUrl // Store signed URL separately for future use
+          url: urlData.publicUrl,
+          path: fileName
         })
       }
-      
+
       setUploadedFiles(prev => [...prev, ...uploadedFileUrls])
     } catch (error) {
       console.error('Error uploading files:', error)
@@ -170,23 +140,24 @@ function AddInternshipModal({ onClose, onAdd }) {
 
   const removeFile = async (index) => {
     const fileToRemove = uploadedFiles[index]
-    
+
     try {
-      // Delete from Supabase Storage
-      if (fileToRemove.path) {
-        const { error } = await supabase.storage
-          .from('internship-files')
-          .remove([fileToRemove.path])
-        
-        if (error) {
-          console.error('Error deleting file:', error)
-        }
+      // Delete from Supabase storage
+      const { error } = await supabase.storage
+        .from('internship-files')
+        .remove([fileToRemove.path])
+
+      if (error) {
+        console.error('Error deleting file:', error)
+        alert('Error deleting file. Please try again.')
+        return
       }
-      
+
       // Remove from local state
       setUploadedFiles(prev => prev.filter((_, i) => i !== index))
     } catch (error) {
       console.error('Error removing file:', error)
+      alert('Error removing file. Please try again.')
     }
   }
 
@@ -197,9 +168,11 @@ function AddInternshipModal({ onClose, onAdd }) {
     try {
       const internshipData = {
         ...formData,
-        files: uploadedFiles // Include file information
+        files: uploadedFiles
       }
+
       await onAdd(internshipData)
+
       // Clear draft after successful submission
       localStorage.removeItem('internship_draft')
       setFormData({
@@ -215,6 +188,8 @@ function AddInternshipModal({ onClose, onAdd }) {
         tags: []
       })
       setUploadedFiles([])
+
+      handleClose()
     } catch (error) {
       console.error('Error adding internship:', error)
     } finally {
@@ -246,7 +221,7 @@ function AddInternshipModal({ onClose, onAdd }) {
 
   return (
     <div className={`modal-overlay ${isVisible ? 'opacity-100' : 'opacity-0'}`}>
-      <div className={`modal-content ${isVisible ? 'scale-100' : 'scale-95'}`}>
+      <div className={`modal-content max-w-2xl ${isVisible ? 'scale-100' : 'scale-95'}`}>
         <div className="p-6">
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
@@ -314,12 +289,15 @@ function AddInternshipModal({ onClose, onAdd }) {
                     name="location"
                     value={formData.location}
                     onChange={handleChange}
-                    className="input-field pl-10"
+                    className="input-field pl-10 pr-10 appearance-none"
                   >
                     <option value="remote">Remote</option>
                     <option value="on-site">On-site</option>
                     <option value="hybrid">Hybrid</option>
                   </select>
+                  <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                    <ChevronDown className="h-4 w-4 text-gray-400" />
+                  </div>
                 </div>
               </div>
 
@@ -343,17 +321,22 @@ function AddInternshipModal({ onClose, onAdd }) {
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Status
                 </label>
-                <select
-                  name="status"
-                  value={formData.status}
-                  onChange={handleChange}
-                  className="input-field"
-                >
-                  <option value="applied">Applied</option>
-                  <option value="interviewing">Interviewing</option>
-                  <option value="offer">Offer</option>
-                  <option value="rejected">Rejected</option>
-                </select>
+                <div className="relative">
+                  <select
+                    name="status"
+                    value={formData.status}
+                    onChange={handleChange}
+                    className="input-field pr-10 appearance-none"
+                  >
+                    <option value="applied">Applied</option>
+                    <option value="interviewing">Interviewing</option>
+                    <option value="offer">Offer</option>
+                    <option value="rejected">Rejected</option>
+                  </select>
+                  <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                    <ChevronDown className="h-4 w-4 text-gray-400" />
+                  </div>
+                </div>
               </div>
 
               <div>
@@ -419,7 +402,7 @@ function AddInternshipModal({ onClose, onAdd }) {
                 Tags
               </label>
               <div className="flex flex-wrap gap-2">
-                {availableTags.map((tag) => (
+                {predefinedTags.map((tag) => (
                   <button
                     key={tag.name}
                     type="button"
@@ -429,7 +412,7 @@ function AddInternshipModal({ onClose, onAdd }) {
                         ? 'text-white shadow-md'
                         : 'hover:shadow-sm'
                     }`}
-                    style={{ 
+                    style={{
                       backgroundColor: formData.tags.includes(tag.name) ? tag.color : `${tag.color}20`,
                       color: formData.tags.includes(tag.name) ? 'white' : tag.color,
                       border: `1px solid ${tag.color}40`
@@ -447,29 +430,34 @@ function AddInternshipModal({ onClose, onAdd }) {
                 Attachments
               </label>
               <div className="space-y-3">
-                <div className="flex items-center space-x-2">
-                  <button
-                    type="button"
-                    onClick={() => fileInputRef.current?.click()}
-                    disabled={fileUploading}
-                    className="flex items-center space-x-2 px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors disabled:opacity-50"
-                  >
-                    <Upload className="h-4 w-4" />
-                    <span>{fileUploading ? 'Uploading...' : 'Upload Files'}</span>
-                  </button>
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    multiple
-                    onChange={handleFileUpload}
-                    className="hidden"
-                    accept=".pdf,.doc,.docx,.txt,.jpg,.jpeg,.png"
-                  />
-                  <span className="text-sm text-gray-500 dark:text-gray-400">
-                    Max 10MB per file
-                  </span>
+                <div className="flex items-center justify-center w-full">
+                  <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-gray-300 dark:border-gray-600 border-dashed rounded-lg cursor-pointer bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors">
+                    <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                      <Upload className="w-8 h-8 mb-2 text-gray-500 dark:text-gray-400" />
+                      <p className="mb-2 text-sm text-gray-500 dark:text-gray-400">
+                        <span className="font-semibold">Click to upload</span> or drag and drop
+                      </p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">PDF, DOC, DOCX, TXT (MAX. 10MB each)</p>
+                    </div>
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      multiple
+                      accept=".pdf,.doc,.docx,.txt"
+                      onChange={handleFileUpload}
+                      className="hidden"
+                      disabled={fileUploading}
+                    />
+                  </label>
                 </div>
-                
+
+                {fileUploading && (
+                  <div className="text-center py-2">
+                    <div className="loading-spinner rounded-full h-6 w-6 border-b-2 border-primary-500 mx-auto"></div>
+                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">Uploading files...</p>
+                  </div>
+                )}
+
                 {uploadedFiles.length > 0 && (
                   <div className="space-y-2">
                     {uploadedFiles.map((file, index) => (
@@ -479,7 +467,7 @@ function AddInternshipModal({ onClose, onAdd }) {
                           <div className="flex flex-col">
                             <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{file.name}</span>
                             <span className="text-xs text-gray-500 dark:text-gray-400">
-                              {(file.size / 1024 / 1024).toFixed(2)} MB • {file.type}
+                              {(file.size / 1024 / 1024).toFixed(2)} MB
                             </span>
                           </div>
                         </div>
@@ -555,4 +543,4 @@ function AddInternshipModal({ onClose, onAdd }) {
   )
 }
 
-export default AddInternshipModal 
+export default AddInternshipModal

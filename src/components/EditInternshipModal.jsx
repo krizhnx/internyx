@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react'
-import { X, Building, User, MapPin, Calendar, FileText, Tag, DollarSign, Download, Trash2 } from 'lucide-react'
+import { useState, useEffect, useRef } from 'react'
+import { X, Building, User, MapPin, Calendar, FileText, Tag, DollarSign, Download, Trash2, Upload, ChevronDown } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 
 function EditInternshipModal({ internship, onClose, onUpdate }) {
@@ -18,6 +18,8 @@ function EditInternshipModal({ internship, onClose, onUpdate }) {
   const [loading, setLoading] = useState(false)
   const [isVisible, setIsVisible] = useState(false)
   const [files, setFiles] = useState(internship.files || [])
+  const [fileUploading, setFileUploading] = useState(false)
+  const fileInputRef = useRef(null)
 
   // Predefined tags
   const predefinedTags = [
@@ -32,6 +34,78 @@ function EditInternshipModal({ internship, onClose, onUpdate }) {
   useEffect(() => {
     setIsVisible(true)
   }, [])
+
+  const handleFileUpload = async (event) => {
+    const newFiles = Array.from(event.target.files)
+    setFileUploading(true)
+
+    try {
+      const uploadedFileUrls = []
+
+      for (const file of newFiles) {
+        if (file.size > 10 * 1024 * 1024) { // 10MB limit
+          alert(`File ${file.name} is too large. Maximum size is 10MB.`)
+          continue
+        }
+
+        const fileExt = file.name.split('.').pop()
+        const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`
+
+        const { data, error } = await supabase.storage
+          .from('internship-files')
+          .upload(fileName, file)
+
+        if (error) {
+          console.error('Error uploading file:', error)
+          alert(`Error uploading ${file.name}: ${error.message}`)
+          continue
+        }
+
+        // Get the public URL
+        const { data: urlData } = supabase.storage
+          .from('internship-files')
+          .getPublicUrl(fileName)
+
+        uploadedFileUrls.push({
+          name: file.name,
+          size: file.size,
+          type: file.type,
+          url: urlData.publicUrl,
+          path: fileName
+        })
+      }
+
+      setFiles(prev => [...prev, ...uploadedFileUrls])
+    } catch (error) {
+      console.error('Error uploading files:', error)
+      alert('Error uploading files. Please try again.')
+    } finally {
+      setFileUploading(false)
+    }
+  }
+
+  const removeFile = async (index) => {
+    const fileToRemove = files[index]
+
+    try {
+      // Delete from Supabase storage
+      const { error } = await supabase.storage
+        .from('internship-files')
+        .remove([fileToRemove.path])
+
+      if (error) {
+        console.error('Error deleting file:', error)
+        alert('Error deleting file. Please try again.')
+        return
+      }
+
+      // Remove from local state
+      setFiles(prev => prev.filter((_, i) => i !== index))
+    } catch (error) {
+      console.error('Error removing file:', error)
+      alert('Error removing file. Please try again.')
+    }
+  }
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -74,7 +148,7 @@ function EditInternshipModal({ internship, onClose, onUpdate }) {
 
   return (
     <div className={`modal-overlay ${isVisible ? 'opacity-100' : 'opacity-0'}`}>
-      <div className={`modal-content ${isVisible ? 'scale-100' : 'scale-95'}`}>
+      <div className={`modal-content max-w-2xl ${isVisible ? 'scale-100' : 'scale-95'}`}>
         <div className="p-6">
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
@@ -142,12 +216,15 @@ function EditInternshipModal({ internship, onClose, onUpdate }) {
                     name="location"
                     value={formData.location}
                     onChange={handleChange}
-                    className="input-field pl-10"
+                    className="input-field pl-10 pr-10 appearance-none"
                   >
                     <option value="remote">Remote</option>
                     <option value="on-site">On-site</option>
                     <option value="hybrid">Hybrid</option>
                   </select>
+                  <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                    <ChevronDown className="h-4 w-4 text-gray-400" />
+                  </div>
                 </div>
               </div>
 
@@ -171,17 +248,22 @@ function EditInternshipModal({ internship, onClose, onUpdate }) {
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Status
                 </label>
-                <select
-                  name="status"
-                  value={formData.status}
-                  onChange={handleChange}
-                  className="input-field"
-                >
-                  <option value="applied">Applied</option>
-                  <option value="interviewing">Interviewing</option>
-                  <option value="offer">Offer</option>
-                  <option value="rejected">Rejected</option>
-                </select>
+                <div className="relative">
+                  <select
+                    name="status"
+                    value={formData.status}
+                    onChange={handleChange}
+                    className="input-field pr-10 appearance-none"
+                  >
+                    <option value="applied">Applied</option>
+                    <option value="interviewing">Interviewing</option>
+                    <option value="offer">Offer</option>
+                    <option value="rejected">Rejected</option>
+                  </select>
+                  <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                    <ChevronDown className="h-4 w-4 text-gray-400" />
+                  </div>
+                </div>
               </div>
 
               <div>
@@ -198,7 +280,7 @@ function EditInternshipModal({ internship, onClose, onUpdate }) {
                     value={formData.salary}
                     onChange={handleChange}
                     className="input-field pl-10"
-                    placeholder="e.g., 8000/month"
+                    placeholder="e.g., $8000/month"
                   />
                 </div>
               </div>
@@ -257,7 +339,7 @@ function EditInternshipModal({ internship, onClose, onUpdate }) {
                         ? 'text-white shadow-md'
                         : 'hover:shadow-sm'
                     }`}
-                    style={{ 
+                    style={{
                       backgroundColor: formData.tags.includes(tag.name) ? tag.color : `${tag.color}20`,
                       color: formData.tags.includes(tag.name) ? 'white' : tag.color,
                       border: `1px solid ${tag.color}40`
@@ -274,57 +356,94 @@ function EditInternshipModal({ internship, onClose, onUpdate }) {
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Attachments
               </label>
-              {files && files.length > 0 ? (
-                <div className="space-y-2">
-                  {files.map((file, index) => (
-                    <div key={index} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                      <div className="flex items-center space-x-2">
-                        <FileText className="h-4 w-4 text-gray-500" />
-                        <div className="flex flex-col">
-                          <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{file.name}</span>
-                          <span className="text-xs text-gray-500 dark:text-gray-400">
-                            {(file.size / 1024 / 1024).toFixed(2)} MB • {file.type}
-                          </span>
+              <div className="space-y-3">
+                {/* Add new files */}
+                <div className="flex items-center justify-center w-full">
+                  <label className="flex flex-col items-center justify-center w-full h-24 border-2 border-gray-300 dark:border-gray-600 border-dashed rounded-lg cursor-pointer bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors">
+                    <div className="flex flex-col items-center justify-center pt-3 pb-4">
+                      <Upload className="w-6 h-6 mb-1 text-gray-500 dark:text-gray-400" />
+                      <p className="text-sm text-gray-500 dark:text-gray-400">
+                        <span className="font-semibold">Click to upload</span> new files
+                      </p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">PDF, DOC, DOCX, TXT (MAX. 10MB each)</p>
+                    </div>
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      multiple
+                      accept=".pdf,.doc,.docx,.txt"
+                      onChange={handleFileUpload}
+                      className="hidden"
+                      disabled={fileUploading}
+                    />
+                  </label>
+                </div>
+
+                {fileUploading && (
+                  <div className="text-center py-2">
+                    <div className="loading-spinner rounded-full h-5 w-5 border-b-2 border-primary-500 mx-auto"></div>
+                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">Uploading files...</p>
+                  </div>
+                )}
+
+                {/* Existing files */}
+                {files && files.length > 0 ? (
+                  <div className="space-y-2">
+                    {files.map((file, index) => (
+                      <div key={index} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600">
+                        <div className="flex items-center space-x-3">
+                          <FileText className="h-4 w-4 text-gray-500" />
+                          <div className="flex flex-col">
+                            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{file.name}</span>
+                            <span className="text-xs text-gray-500 dark:text-gray-400">
+                              {(file.size / 1024 / 1024).toFixed(2)} MB • {file.type}
+                            </span>
+                          </div>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <a
+                            href={file.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="p-2 text-blue-500 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-all duration-200"
+                            title="Download file"
+                            onClick={async (e) => {
+                              if (file.url.includes('/storage/v1/object/sign/') && file.path) {
+                                try {
+                                  const { data: newSignedUrl, error } = await supabase.storage
+                                    .from('internship-files')
+                                    .createSignedUrl(file.path, 3600)
+
+                                  if (!error && newSignedUrl?.signedUrl) {
+                                    window.open(newSignedUrl.signedUrl, '_blank')
+                                    e.preventDefault()
+                                  }
+                                } catch (error) {
+                                  console.error('Error refreshing signed URL:', error)
+                                }
+                              }
+                            }}
+                          >
+                            <Download className="h-4 w-4" />
+                          </a>
+                          <button
+                            type="button"
+                            onClick={() => removeFile(index)}
+                            className="p-2 text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-all duration-200"
+                            title="Delete file"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
                         </div>
                       </div>
-                      <div className="flex items-center space-x-2">
-                                                 <a
-                           href={file.url}
-                           target="_blank"
-                           rel="noopener noreferrer"
-                           className="p-1 text-blue-500 hover:text-blue-700 transition-colors"
-                           title="Download file"
-                           onClick={async (e) => {
-                             // If it's a signed URL and might be expired, try to refresh it
-                             if (file.url.includes('/storage/v1/object/sign/') && file.path) {
-                               try {
-                                 const { data: newSignedUrl, error } = await supabase.storage
-                                   .from('internship-files')
-                                   .createSignedUrl(file.path, 3600)
-                                 
-                                 if (!error && newSignedUrl?.signedUrl) {
-                                   // Update the URL and open the new signed URL
-                                   window.open(newSignedUrl.signedUrl, '_blank')
-                                   e.preventDefault()
-                                 }
-                               } catch (error) {
-                                 console.error('Error refreshing signed URL:', error)
-                                 // Continue with original URL if refresh fails
-                               }
-                             }
-                           }}
-                         >
-                           <Download className="h-4 w-4" />
-                         </a>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-sm text-gray-500 dark:text-gray-400 italic">
-                  No attachments for this internship
-                </div>
-              )}
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-sm text-gray-500 dark:text-gray-400 italic text-center py-4">
+                    No attachments for this internship
+                  </div>
+                )}
+              </div>
             </div>
 
             <div>
@@ -373,4 +492,4 @@ function EditInternshipModal({ internship, onClose, onUpdate }) {
   )
 }
 
-export default EditInternshipModal 
+export default EditInternshipModal
