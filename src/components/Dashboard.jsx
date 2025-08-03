@@ -523,6 +523,9 @@ function Dashboard({ user }) {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      {/* Detached Glass Navbar */}
+      {/* Removed detached navbar as per edit hint */}
+
       <div className="space-y-8">
         {/* Analytics */}
         <Analytics internships={internships} onAddInternship={() => setShowAddModal(true)} />
@@ -674,7 +677,7 @@ function Dashboard({ user }) {
                   <span>Add Tag</span>
                 </button>
               </div>
-              <div className="flex flex-wrap gap-2">
+              <div className="flex flex-wrap gap-2 justify-center sm:justify-start">
                 {predefinedTags.map((tag) => (
                   <button
                     key={tag.name}

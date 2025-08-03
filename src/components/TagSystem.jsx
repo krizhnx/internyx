@@ -134,7 +134,7 @@ function TagSystem({ user, selectedTags, onTagChange, onDatabaseSetupNeeded }) {
       </div>
 
       <div className="space-y-4">
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-2 justify-center sm:justify-start">
           {allTags.map((tag) => (
             <button
               key={tag.name}
@@ -160,7 +160,7 @@ function TagSystem({ user, selectedTags, onTagChange, onDatabaseSetupNeeded }) {
         </div>
 
         {selectedTags.length > 0 && (
-          <div className="flex items-center space-x-2 text-sm text-gray-600 dark:text-gray-400">
+          <div className="flex items-center space-x-2 text-sm text-gray-600 dark:text-gray-400 justify-center sm:justify-start">
             <Tag className="h-4 w-4" />
             <span>Filtering by: {selectedTags.join(', ')}</span>
             <button

@@ -140,23 +140,27 @@ function InternshipList({ internships, onUpdate, onDelete, dragMode = false }) {
                         {internship.location_place && (
                           <span className="inline-flex items-center space-x-1 px-2.5 py-1 rounded-lg text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-300 border border-gray-200 dark:border-gray-700 flex-shrink-0">
                             <MapPin className="h-3 w-3" />
-                            <span>{internship.location_place}</span>
+                            <span className="hidden sm:inline">{internship.location_place}</span>
+                            <span className="sm:hidden">{internship.location_place.length > 10 ? internship.location_place.substring(0, 10) + '...' : internship.location_place}</span>
                           </span>
                         )}
                         <span className="inline-flex items-center space-x-1 px-2.5 py-1 rounded-lg text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300 border border-blue-200 dark:border-blue-800 flex-shrink-0">
                           <Calendar className="h-3 w-3" />
-                          <span>Applied: {formatDate(internship.applied_date)}</span>
+                          <span className="hidden sm:inline">Applied: {formatDate(internship.applied_date)}</span>
+                          <span className="sm:hidden">Applied</span>
                         </span>
                         {internship.deadline && (
                           <span className="inline-flex items-center space-x-1 px-2.5 py-1 rounded-lg text-xs font-medium bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300 border border-purple-200 dark:border-purple-800 flex-shrink-0">
                             <Calendar className="h-3 w-3" />
-                            <span>Deadline: {formatDate(internship.deadline)}</span>
+                            <span className="hidden sm:inline">Deadline: {formatDate(internship.deadline)}</span>
+                            <span className="sm:hidden">Deadline</span>
                           </span>
                         )}
                         {internship.salary && (
                           <span className="inline-flex items-center space-x-1 px-2.5 py-1 rounded-lg text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300 border border-green-200 dark:border-green-800 flex-shrink-0">
                             <DollarSign className="h-3 w-3" />
-                            <span>{internship.salary}</span>
+                            <span className="hidden sm:inline">${internship.salary}</span>
+                            <span className="sm:hidden">${internship.salary}</span>
                           </span>
                         )}
                       </div>
@@ -164,37 +168,37 @@ function InternshipList({ internships, onUpdate, onDelete, dragMode = false }) {
                       {/* Tags */}
                       {internship.tags && internship.tags.length > 0 && (
                         <div className="mb-4">
-                          <div className="flex items-center space-x-2 mb-2">
+                          <div className="flex items-center space-x-2 mb-2 justify-center sm:justify-start">
                             <Tag className="h-4 w-4 text-gray-500" />
                             <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Tags:</span>
-                          </div>
-                          <div className="flex items-center gap-2 justify-center sm:justify-start flex-wrap">
-                            {internship.tags.map((tagName) => {
-                              const predefinedTags = [
-                                { name: 'Dream Company', color: '#ef4444', icon: Star },
-                                { name: 'Priority', color: '#f59e0b', icon: TrendingUp },
-                                { name: 'Tech', color: '#3b82f6', icon: Building },
-                                { name: 'Finance', color: '#10b981', icon: DollarSign },
-                                { name: 'Remote', color: '#8b5cf6', icon: MapPin },
-                                { name: 'Startup', color: '#ec4899', icon: TrendingUp }
-                              ]
-                              const tag = predefinedTags.find(t => t.name === tagName) || { name: tagName, color: '#6b7280', icon: Tag }
-                              const IconComponent = tag.icon
-                              return (
-                                <span
-                                  key={tagName}
-                                  className="inline-flex items-center space-x-1 px-2.5 py-1 rounded-full text-xs font-semibold border transition-all duration-200 hover:scale-105 flex-shrink-0"
-                                  style={{
-                                    backgroundColor: `${tag.color}15`,
-                                    color: tag.color,
-                                    borderColor: `${tag.color}40`
-                                  }}
-                                >
-                                  <IconComponent className="h-3 w-3" />
-                                  <span>{tag.name}</span>
-                                </span>
-                              )
-                            })}
+                            <div className="flex items-center gap-2 flex-wrap justify-center sm:justify-start">
+                              {internship.tags.map((tagName) => {
+                                const predefinedTags = [
+                                  { name: 'Dream Company', color: '#ef4444', icon: Star },
+                                  { name: 'Priority', color: '#f59e0b', icon: TrendingUp },
+                                  { name: 'Tech', color: '#3b82f6', icon: Building },
+                                  { name: 'Finance', color: '#10b981', icon: DollarSign },
+                                  { name: 'Remote', color: '#8b5cf6', icon: MapPin },
+                                  { name: 'Startup', color: '#ec4899', icon: TrendingUp }
+                                ]
+                                const tag = predefinedTags.find(t => t.name === tagName) || { name: tagName, color: '#6b7280', icon: Tag }
+                                const IconComponent = tag.icon
+                                return (
+                                  <span
+                                    key={tagName}
+                                    className="inline-flex items-center space-x-1 px-2.5 py-1 rounded-full text-xs font-semibold border transition-all duration-200 hover:scale-105 flex-shrink-0"
+                                    style={{
+                                      backgroundColor: `${tag.color}15`,
+                                      color: tag.color,
+                                      borderColor: `${tag.color}40`
+                                    }}
+                                  >
+                                    <IconComponent className="h-3 w-3" />
+                                    <span>{tag.name}</span>
+                                  </span>
+                                )
+                              })}
+                            </div>
                           </div>
                         </div>
                       )}

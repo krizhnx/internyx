@@ -37,10 +37,9 @@ function AddInternshipModal({ onClose, onAdd }) {
     setIsVisible(true)
     setAvailableTags(predefinedTags)
 
-    // Check if bucket exists, if not create it
-    const checkAndCreateBucket = async () => {
+    // Check if bucket exists
+    const checkBucket = async () => {
       try {
-        // First check if bucket exists
         const { data: buckets, error: listError } = await supabase.storage.listBuckets()
 
         if (listError) {
@@ -51,28 +50,20 @@ function AddInternshipModal({ onClose, onAdd }) {
         const bucketExists = buckets.some(bucket => bucket.name === 'internship-files')
 
         if (!bucketExists) {
-          console.log('Creating internship-files bucket...')
-          const { error: createError } = await supabase.storage.createBucket('internship-files', {
-            public: true,
-            allowedMimeTypes: ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'text/plain'],
-            fileSizeLimit: 10485760 // 10MB
-          })
-
-          if (createError) {
-            console.error('Error creating bucket:', createError)
-            alert('Please create the storage bucket manually in Supabase Dashboard:\n1. Go to Storage\n2. Create bucket named "internship-files"\n3. Set it to public')
-          } else {
-            console.log('Bucket created successfully')
-          }
+          console.log('No internship-files bucket found. Please create it manually in Supabase Dashboard.')
+          console.log('1. Go to Supabase Dashboard > Storage')
+          console.log('2. Create bucket named "internship-files"')
+          console.log('3. Set it to public')
+          console.log('4. Run the RLS policies from DatabaseSetup modal')
         } else {
           console.log('Bucket already exists')
         }
       } catch (error) {
-        console.error('Error checking/creating bucket:', error)
+        console.error('Error checking bucket:', error)
       }
     }
 
-    checkAndCreateBucket()
+    checkBucket()
   }, [])
 
   // Auto-save to localStorage
@@ -120,12 +111,28 @@ function AddInternshipModal({ onClose, onAdd }) {
           .from('internship-files')
           .getPublicUrl(fileName)
 
+        // Try getting a signed URL as alternative
+        const { data: signedUrlData, error: signedUrlError } = await supabase.storage
+          .from('internship-files')
+          .createSignedUrl(fileName, 3600) // 1 hour expiry
+
+        if (signedUrlError) {
+          console.error('Error getting signed URL:', signedUrlError)
+        } else {
+          console.log('Signed URL:', signedUrlData.signedUrl)
+        }
+
+        // Always use signed URL if available, otherwise fall back to public URL
+        const finalUrl = signedUrlData?.signedUrl || urlData.publicUrl
+        console.log('Final URL to be used:', finalUrl)
+
         uploadedFileUrls.push({
           name: file.name,
           size: file.size,
           type: file.type,
-          url: urlData.publicUrl,
-          path: fileName
+          url: finalUrl,
+          path: fileName,
+          signedUrl: signedUrlData?.signedUrl // Store signed URL separately for future use
         })
       }
 

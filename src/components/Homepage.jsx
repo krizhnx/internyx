@@ -109,13 +109,13 @@ function Homepage({ onGetStarted, onAbout }) {
         </div>
 
         {/* Navigation */}
-        <nav className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6">
+        <nav className={`relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 transition-all duration-300`}>
           <div className="flex justify-between items-center">
-            <div className="flex items-center space-x-3">
+            <div className="flex items-center space-x-3 h-16 overflow-hidden">
               <img
                 src={isDarkMode ? "/internyx-white.svg" : "/internyx-black.svg"}
                 alt="Logo"
-                className="h-12 w-12 object-contain"
+                className="h-40 w-40 object-contain"
               />
             </div>
 
@@ -226,16 +226,16 @@ function Homepage({ onGetStarted, onAbout }) {
                 style={{ animationDelay: `${index * 150}ms` }}
               >
                 <div className="absolute inset-0 bg-gradient-to-r from-blue-600/5 to-purple-600/5 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                <div className="relative">
+                <div className="relative text-center">
                   <div className="text-primary-600 mb-6 flex justify-center">
                     <div className="p-4 rounded-2xl bg-gradient-to-br from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20">
                       {feature.icon}
                     </div>
                   </div>
-                  <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
+                  <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-4 text-center">
                     {feature.title}
                   </h3>
-                  <p className="text-gray-600 dark:text-gray-300 leading-relaxed">
+                  <p className="text-gray-600 dark:text-gray-300 leading-relaxed text-center">
                     {feature.description}
                   </p>
                 </div>
@@ -317,20 +317,20 @@ function Homepage({ onGetStarted, onAbout }) {
       {/* Footer */}
       <footer className="bg-gray-900 text-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-8 text-center md:text-left">
             <div className="col-span-1 md:col-span-2">
-              <div className="flex items-center space-x-3 mb-6">
+              <div className="flex items-center space-x-3 mb-6 justify-center md:justify-start">
                 <img
                   src="/internyx-white.svg"
                   alt="Logo"
                   className="h-12 w-12 object-contain"
                 />
               </div>
-              <p className="text-gray-300 mb-6 max-w-md">
+              <p className="text-gray-300 mb-6 max-w-md mx-auto md:mx-0">
                 Empowering students to track and optimize their internship applications with ease.
                 Your journey to success starts here.
               </p>
-              <div className="flex space-x-4">
+              <div className="flex space-x-4 justify-center md:justify-start">
                 <button className="p-3 rounded-xl bg-gray-800 text-gray-300 hover:bg-gray-700 transition-all duration-300">
                   <Mail className="h-5 w-5" />
                 </button>
@@ -340,7 +340,7 @@ function Homepage({ onGetStarted, onAbout }) {
               </div>
             </div>
 
-            <div>
+            <div className="text-center md:text-left">
               <h4 className="text-lg font-semibold mb-6">Navigation</h4>
               <ul className="space-y-3">
                 <li>
@@ -369,17 +369,17 @@ function Homepage({ onGetStarted, onAbout }) {
               </ul>
             </div>
 
-            <div>
+            <div className="text-center md:text-left">
               <h4 className="text-lg font-semibold mb-6">Legal</h4>
               <ul className="space-y-3">
                 <li>
-                  <button className="text-gray-300 hover:text-white transition-colors flex items-center space-x-2">
+                  <button className="text-gray-300 hover:text-white transition-colors flex items-center space-x-2 justify-center md:justify-start">
                     <Shield className="h-4 w-4" />
                     <span>Privacy Policy</span>
                   </button>
                 </li>
                 <li>
-                  <button className="text-gray-300 hover:text-white transition-colors flex items-center space-x-2">
+                  <button className="text-gray-300 hover:text-white transition-colors flex items-center space-x-2 justify-center md:justify-start">
                     <FileText className="h-4 w-4" />
                     <span>Terms of Service</span>
                   </button>

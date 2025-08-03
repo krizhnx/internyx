@@ -90,26 +90,26 @@ function TableView({ internships, onUpdate, onDelete, dragMode = false }) {
         <table className="w-full">
           <thead>
             <tr className="border-b border-gray-200 dark:border-gray-700">
-              {dragMode && <th className="text-left py-3 px-2 font-medium text-gray-900 dark:text-gray-100 w-8"></th>}
-              <th className="text-left py-3 px-4 font-medium text-gray-900 dark:text-gray-100">Company</th>
-              <th className="text-left py-3 px-4 font-medium text-gray-900 dark:text-gray-100">Role</th>
-              <th className="text-left py-3 px-4 font-medium text-gray-900 dark:text-gray-100">Status</th>
-              <th className="text-left py-3 px-4 font-medium text-gray-900 dark:text-gray-100">Location</th>
-              <th className="text-left py-3 px-4 font-medium text-gray-900 dark:text-gray-100">Applied</th>
-              <th className="text-left py-3 px-4 font-medium text-gray-900 dark:text-gray-100">Deadline</th>
-              <th className="text-left py-3 px-4 font-medium text-gray-900 dark:text-gray-100">Tags</th>
-              <th className="text-left py-3 px-4 font-medium text-gray-900 dark:text-gray-100">Actions</th>
+              {dragMode && <th className="text-center py-3 px-2 font-medium text-gray-900 dark:text-gray-100 w-8"></th>}
+              <th className="text-center py-3 px-4 font-medium text-gray-900 dark:text-gray-100">Company</th>
+              <th className="text-center py-3 px-4 font-medium text-gray-900 dark:text-gray-100">Role</th>
+              <th className="text-center py-3 px-4 font-medium text-gray-900 dark:text-gray-100">Status</th>
+              <th className="text-center py-3 px-4 font-medium text-gray-900 dark:text-gray-100">Location</th>
+              <th className="text-center py-3 px-4 font-medium text-gray-900 dark:text-gray-100">Applied</th>
+              <th className="text-center py-3 px-4 font-medium text-gray-900 dark:text-gray-100">Deadline</th>
+              <th className="text-center py-3 px-4 font-medium text-gray-900 dark:text-gray-100">Tags</th>
+              <th className="text-center py-3 px-4 font-medium text-gray-900 dark:text-gray-100">Actions</th>
             </tr>
           </thead>
           <tbody>
             {internships.map((internship) => (
               <SortableTableRow key={internship.id} id={internship.id} dragMode={dragMode}>
-                <td className="py-4 px-4">
-                  <div className="flex items-center space-x-3">
+                <td className="py-4 px-4 text-center">
+                  <div className="flex items-center justify-center space-x-3">
                     <div className="w-8 h-8 bg-gradient-to-br from-primary-500 to-primary-600 rounded-lg flex items-center justify-center">
                       <Building className="h-4 w-4 text-white" />
                     </div>
-                    <div>
+                    <div className="text-center">
                       <div className="font-medium text-gray-900 dark:text-gray-100">{internship.company_name}</div>
                       {internship.deadline && getDeadlineStatus(internship.deadline) && (
                         <span className={`inline-flex items-center space-x-1 px-1.5 py-0.5 rounded-full text-xs font-medium ${getDeadlineStatus(internship.deadline).color}`}>
@@ -120,13 +120,13 @@ function TableView({ internships, onUpdate, onDelete, dragMode = false }) {
                     </div>
                   </div>
                 </td>
-                <td className="py-4 px-4 text-gray-900 dark:text-gray-100">{internship.role}</td>
-                <td className="py-4 px-4">
+                <td className="py-4 px-4 text-center text-gray-900 dark:text-gray-100">{internship.role}</td>
+                <td className="py-4 px-4 text-center">
                   <span className={getStatusBadge(internship.status)}>
                     {internship.status.charAt(0).toUpperCase() + internship.status.slice(1)}
                   </span>
                 </td>
-                <td className="py-4 px-4">
+                <td className="py-4 px-4 text-center">
                   <div className="space-y-1">
                     <span className={getLocationBadge(internship.location)}>
                       {internship.location.charAt(0).toUpperCase() + internship.location.slice(1)}
@@ -138,11 +138,11 @@ function TableView({ internships, onUpdate, onDelete, dragMode = false }) {
                     )}
                   </div>
                 </td>
-                <td className="py-4 px-4 text-gray-600 dark:text-gray-400">{formatDate(internship.applied_date)}</td>
-                <td className="py-4 px-4 text-gray-600 dark:text-gray-400">{formatDate(internship.deadline)}</td>
-                <td className="py-4 px-4">
+                <td className="py-4 px-4 text-center text-gray-600 dark:text-gray-400">{formatDate(internship.applied_date)}</td>
+                <td className="py-4 px-4 text-center text-gray-600 dark:text-gray-400">{formatDate(internship.deadline)}</td>
+                <td className="py-4 px-4 text-center">
                   {internship.tags && internship.tags.length > 0 ? (
-                    <div className="flex flex-wrap gap-1">
+                    <div className="flex flex-wrap gap-1 justify-center">
                       {internship.tags.map((tagName) => {
                         const predefinedTags = [
                           { name: 'Dream Company', color: '#ef4444' },
@@ -173,8 +173,8 @@ function TableView({ internships, onUpdate, onDelete, dragMode = false }) {
                     <span className="text-gray-400 text-sm">-</span>
                   )}
                 </td>
-                <td className="py-4 px-4">
-                  <div className="flex items-center space-x-1">
+                <td className="py-4 px-4 text-center">
+                  <div className="flex items-center justify-center space-x-1">
                     <button
                       onClick={() => handleEdit(internship)}
                       className="p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors"

@@ -175,7 +175,7 @@ export function PageLoader({ message = 'Loading your experience...' }) {
           <img
             src={isDarkMode ? "/internyx-white.svg" : "/internyx-black.svg"}
             alt="Logo"
-            className="h-12 w-12 object-contain mx-auto animate-pulse"
+            className="h-48 w-48 object-contain mx-auto animate-pulse"
           />
         </div>
         <Loader type="gradient" size="lg" text={message} />

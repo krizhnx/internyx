@@ -52,21 +52,21 @@ function Footer() {
         </div>
 
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 text-center md:text-left">
             {/* Brand Section */}
             <div className="lg:col-span-2">
-              <div className="flex items-center space-x-3 mb-6">
+              <div className="flex items-center space-x-3 mb-6 justify-center md:justify-start">
                 <img
                   src={isDarkMode ? "/internyx-white.svg" : "/internyx-black.svg"}
                   alt="Logo"
                   className="h-12 w-12 object-contain"
                 />
               </div>
-              <p className="text-gray-600 dark:text-gray-400 mb-8 max-w-md leading-relaxed">
+              <p className="text-gray-600 dark:text-gray-400 mb-8 max-w-md leading-relaxed mx-auto md:mx-0">
                 Empowering students to track and optimize their internship applications with ease.
                 Your journey to success starts here with our comprehensive platform.
               </p>
-              <div className="flex items-center space-x-4">
+              <div className="flex items-center space-x-4 justify-center md:justify-start">
                 <a
                   href="mailto:support@internyx.com"
                   className="group flex items-center space-x-2 text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-all duration-300 transform hover:scale-105"
@@ -102,82 +102,68 @@ function Footer() {
             </div>
 
             {/* Quick Links */}
-            <div>
-              <h4 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-6">
-                Quick Links
-              </h4>
-              <ul className="space-y-4">
+            <div className="text-center md:text-left">
+              <h4 className="text-lg font-semibold mb-6 text-gray-900 dark:text-gray-100">Quick Links</h4>
+              <ul className="space-y-3">
                 <li>
                   <a
-                    href="#dashboard"
-                    className="text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-all duration-300 transform hover:translate-x-1 inline-block"
+                    href="#features"
+                    className="text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors flex items-center space-x-2 justify-center md:justify-start"
                   >
-                    Dashboard
+                    <Building className="h-4 w-4" />
+                    <span>Features</span>
                   </a>
                 </li>
                 <li>
                   <a
-                    href="#analytics"
-                    className="text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-all duration-300 transform hover:translate-x-1 inline-block"
+                    href="#pricing"
+                    className="text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors flex items-center space-x-2 justify-center md:justify-start"
                   >
-                    Analytics
+                    <Globe className="h-4 w-4" />
+                    <span>Pricing</span>
                   </a>
                 </li>
                 <li>
                   <a
-                    href="#add-internship"
-                    className="text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-all duration-300 transform hover:translate-x-1 inline-block"
+                    href="#support"
+                    className="text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors flex items-center space-x-2 justify-center md:justify-start"
                   >
-                    Add Internship
-                  </a>
-                </li>
-                <li>
-                  <a
-                    href="#export"
-                    className="text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-all duration-300 transform hover:translate-x-1 inline-block"
-                  >
-                    Export Data
+                    <Mail className="h-4 w-4" />
+                    <span>Support</span>
                   </a>
                 </li>
               </ul>
             </div>
 
             {/* Resources */}
-            <div>
-              <h4 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-6">
-                Resources
-              </h4>
-              <ul className="space-y-4">
+            <div className="text-center md:text-left">
+              <h4 className="text-lg font-semibold mb-6 text-gray-900 dark:text-gray-100">Resources</h4>
+              <ul className="space-y-3">
                 <li>
                   <a
-                    href="#help"
-                    className="text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-all duration-300 transform hover:translate-x-1 inline-block"
+                    href="#blog"
+                    className="text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors flex items-center space-x-2 justify-center md:justify-start"
                   >
-                    Help Center
+                    <Globe className="h-4 w-4" />
+                    <span>Blog</span>
                   </a>
                 </li>
                 <li>
                   <a
-                    href="#privacy"
-                    className="text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-all duration-300 transform hover:translate-x-1 inline-block"
+                    href="#docs"
+                    className="text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors flex items-center space-x-2 justify-center md:justify-start"
                   >
-                    Privacy Policy
-                  </a>
-                </li>
-                <li>
-                  <a
-                    href="#terms"
-                    className="text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-all duration-300 transform hover:translate-x-1 inline-block"
-                  >
-                    Terms of Service
+                    <Building className="h-4 w-4" />
+                    <span>Documentation</span>
                   </a>
                 </li>
                 <li>
                   <a
                     href="#api"
-                    className="text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-all duration-300 transform hover:translate-x-1 inline-block"
+                    className="text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors flex items-center space-x-2 justify-center md:justify-start"
                   >
-                    API Documentation
+                    <Globe className="h-4 w-4" />
+                    <span>API</span>
                   </a>
                 </li>
               </ul>
@@ -186,11 +172,11 @@ function Footer() {
 
           {/* Bottom Section */}
           <div className="border-t border-gray-200 dark:border-gray-700 mt-12 pt-8">
-            <div className="flex flex-col sm:flex-row justify-between items-center space-y-4 sm:space-y-0">
+            <div className="flex flex-col sm:flex-row justify-between items-center space-y-4 sm:space-y-0 text-center">
               <p className="text-sm text-gray-600 dark:text-gray-400">
                 © 2024 All rights reserved.
               </p>
-              <div className="flex items-center space-x-2 text-sm text-gray-600 dark:text-gray-400">
+              <div className="flex items-center space-x-2 text-sm text-gray-600 dark:text-gray-400 justify-center">
                 <span>Made with</span>
                 <Heart className="h-4 w-4 text-red-500 animate-pulse" />
                 <span>for students worldwide</span>

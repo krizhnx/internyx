@@ -115,7 +115,7 @@ function Auth() {
               <img
                 src={isDarkMode ? "/internyx-white.svg" : "/internyx-black.svg"}
                 alt="Logo"
-                className="h-16 w-16 object-contain mx-auto"
+                className="h-40 w-40 object-contain mx-auto -mb-16"
               />
             </div>
             <div className="inline-flex items-center space-x-2 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-full px-4 py-2 mt-4 shadow-lg">

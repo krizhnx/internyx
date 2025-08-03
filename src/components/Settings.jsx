@@ -206,7 +206,21 @@ function Settings({ user, onClose }) {
   }
 
   const handleLogout = async () => {
-    await supabase.auth.signOut()
+    try {
+      console.log('Attempting to sign out from settings...')
+      const { error } = await supabase.auth.signOut()
+      if (error) {
+        console.error('Error signing out:', error)
+        showToast('Error signing out. Please try again.', 'error')
+      } else {
+        console.log('Successfully signed out from settings')
+        // Force a page reload to ensure clean state
+        window.location.href = '/'
+      }
+    } catch (error) {
+      console.error('Unexpected error during sign out:', error)
+      showToast('Unexpected error during sign out. Please try again.', 'error')
+    }
   }
 
   const tabs = [

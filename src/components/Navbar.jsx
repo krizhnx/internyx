@@ -44,8 +44,22 @@ function Navbar({ user }) {
   }
 
   const handleLogout = async () => {
-    await supabase.auth.signOut()
-    handleCloseMenu()
+    try {
+      console.log('Attempting to sign out...')
+      const { error } = await supabase.auth.signOut()
+      if (error) {
+        console.error('Error signing out:', error)
+        alert('Error signing out. Please try again.')
+      } else {
+        console.log('Successfully signed out')
+        // Force a page reload to ensure clean state
+        window.location.href = '/'
+      }
+      handleCloseMenu()
+    } catch (error) {
+      console.error('Unexpected error during sign out:', error)
+      alert('Unexpected error during sign out. Please try again.')
+    }
   }
 
   const handleSettingsClick = () => {
@@ -80,21 +94,13 @@ function Navbar({ user }) {
             <img
               src={darkMode ? "/internyx-white.svg" : "/internyx-black.svg"}
               alt="Logo"
-              className="h-8 w-8 object-contain"
+              className="h-40 w-40 object-contain"
             />
           </div>
 
           {/* Center Navigation */}
           <div className="hidden md:flex items-center space-x-8">
-            <a href="#dashboard" className="text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200 font-medium">
-              Dashboard
-            </a>
-            <a href="#analytics" className="text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200 font-medium">
-              Analytics
-            </a>
-            <a href="#applications" className="text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200 font-medium">
-              Applications
-            </a>
+            {/* Navigation links removed */}
           </div>
 
           {/* Right Side Actions */}
