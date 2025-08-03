@@ -1,6 +1,29 @@
 import { Heart, Github, Mail, Building } from 'lucide-react'
+import { useState, useEffect } from 'react'
 
 function Footer() {
+  const [isDarkMode, setIsDarkMode] = useState(false)
+
+  useEffect(() => {
+    // Check if dark mode is enabled
+    const checkDarkMode = () => {
+      const isDark = document.documentElement.classList.contains('dark')
+      setIsDarkMode(isDark)
+    }
+
+    // Check initially
+    checkDarkMode()
+
+    // Listen for theme changes
+    const observer = new MutationObserver(checkDarkMode)
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['class']
+    })
+
+    return () => observer.disconnect()
+  }, [])
+
   return (
     <footer className="bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 mt-auto">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -9,13 +32,10 @@ function Footer() {
           <div className="col-span-1 md:col-span-2">
             <div className="flex items-center justify-center md:justify-start space-x-3 mb-4">
               <img 
-                src="/ChatGPT_Image_Aug_1__2025__07_16_07_PM-removebg-preview.png" 
+                src={isDarkMode ? "/internyx-white.svg" : "/internyx-black.svg"}
                 alt="INTERNYX Logo" 
-                className="h-8 w-8 object-contain"
+                className="h-40 w-40 object-contain"
               />
-              <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">
-                INTERNYX
-              </h3>
             </div>
             <p className="text-gray-600 dark:text-gray-400 mb-4 max-w-md mx-auto md:mx-0">
               Track your internship applications, monitor your progress, and stay organized throughout your job search journey.

@@ -15,8 +15,10 @@ CREATE TABLE internships (
   status TEXT CHECK (status IN ('applied', 'interviewing', 'offer', 'rejected')) DEFAULT 'applied',
   applied_date DATE,
   deadline DATE,
+  salary TEXT,
   notes TEXT,
   tags TEXT[] DEFAULT '{}',
+  files JSONB DEFAULT '[]',
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
@@ -70,6 +72,52 @@ CREATE TRIGGER update_internships_updated_at
   BEFORE UPDATE ON internships
   FOR EACH ROW
   EXECUTE FUNCTION update_updated_at_column();`
+
+  const migrationSQL = `-- Migration script for existing databases
+-- Add missing columns to existing internships table
+
+-- Add salary column if it doesn't exist
+DO $$ 
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns 
+                 WHERE table_name = 'internships' AND column_name = 'salary') THEN
+    ALTER TABLE internships ADD COLUMN salary TEXT;
+  END IF;
+END $$;
+
+-- Add files column if it doesn't exist
+DO $$ 
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns 
+                 WHERE table_name = 'internships' AND column_name = 'files') THEN
+    ALTER TABLE internships ADD COLUMN files JSONB DEFAULT '[]';
+  END IF;
+END $$;`
+
+  const storageSetup = `-- Storage Setup Instructions:
+-- 1. Go to your Supabase Dashboard > Storage
+-- 2. Create a new bucket called "internship-files" (if not exists)
+-- 3. Set it to public (for file downloads)
+-- 4. Add the following RLS policies:
+
+-- Enable RLS on storage.objects (if not already enabled)
+ALTER TABLE storage.objects ENABLE ROW LEVEL SECURITY;
+
+-- Allow authenticated users to upload files
+CREATE POLICY "Allow upload for authenticated" ON storage.objects 
+FOR INSERT WITH CHECK (auth.role() = 'authenticated');
+
+-- Allow authenticated users to read files
+CREATE POLICY "Allow read for authenticated" ON storage.objects 
+FOR SELECT USING (auth.role() = 'authenticated');
+
+-- Allow users to delete their own files
+CREATE POLICY "Allow delete for authenticated" ON storage.objects 
+FOR DELETE USING (auth.role() = 'authenticated');
+
+-- Allow bucket operations for authenticated users
+CREATE POLICY "Allow bucket operations for authenticated" ON storage.buckets
+FOR ALL USING (auth.role() = 'authenticated');`
 
   const copyToClipboard = async () => {
     try {
@@ -129,7 +177,7 @@ CREATE TRIGGER update_internships_updated_at
             <div>
               <div className="flex items-center justify-between mb-2">
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  SQL Setup Code
+                  SQL Setup Code (for new databases)
                 </label>
                 <button
                   onClick={copyToClipboard}
@@ -152,6 +200,72 @@ CREATE TRIGGER update_internships_updated_at
                 value={sqlSetup}
                 readOnly
                 className="w-full h-64 p-4 bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg font-mono text-xs text-gray-900 dark:text-gray-100 resize-none"
+              />
+            </div>
+
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Migration Script (for existing databases)
+                </label>
+                <button
+                  onClick={() => {
+                    navigator.clipboard.writeText(migrationSQL)
+                    setCopied(true)
+                    setTimeout(() => setCopied(false), 2000)
+                  }}
+                  className="flex items-center space-x-1 text-sm text-primary-600 hover:text-primary-700 transition-colors"
+                >
+                  {copied ? (
+                    <>
+                      <CheckCircle className="h-4 w-4" />
+                      <span>Copied!</span>
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="h-4 w-4" />
+                      <span>Copy</span>
+                    </>
+                  )}
+                </button>
+              </div>
+              <textarea
+                value={migrationSQL}
+                readOnly
+                className="w-full h-32 p-4 bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg font-mono text-xs text-gray-900 dark:text-gray-100 resize-none"
+              />
+            </div>
+
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Storage Setup (for file uploads)
+                </label>
+                <button
+                  onClick={() => {
+                    navigator.clipboard.writeText(storageSetup)
+                    setCopied(true)
+                    setTimeout(() => setCopied(false), 2000)
+                  }}
+                  className="flex items-center space-x-1 text-sm text-primary-600 hover:text-primary-700 transition-colors"
+                >
+                  {copied ? (
+                    <>
+                      <CheckCircle className="h-4 w-4" />
+                      <span>Copied!</span>
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="h-4 w-4" />
+                      <span>Copy</span>
+                    </>
+                  )}
+                </button>
+              </div>
+              <textarea
+                value={storageSetup}
+                readOnly
+                className="w-full h-40 p-4 bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg font-mono text-xs text-gray-900 dark:text-gray-100 resize-none"
               />
             </div>
 

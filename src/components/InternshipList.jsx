@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { Edit, Trash2, Calendar, MapPin, Building, User, MoreVertical, Tag, AlertTriangle, Clock } from 'lucide-react'
+import { Edit, Trash2, Calendar, MapPin, Building, User, MoreVertical, Tag, AlertTriangle, Clock, FileText, Download } from 'lucide-react'
+import { supabase } from '../lib/supabase'
 import EditInternshipModal from './EditInternshipModal'
 import SortableInternshipCard from './SortableInternshipCard'
 
@@ -138,6 +139,12 @@ function InternshipList({ internships, onUpdate, onDelete, dragMode = false }) {
                         <span>Deadline: {formatDate(internship.deadline)}</span>
                       </span>
                     )}
+                    {internship.salary && (
+                      <span className="inline-flex items-center space-x-1 px-2 py-1 rounded-md text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300">
+                        <span className="font-bold">$</span>
+                        <span>{internship.salary}</span>
+                      </span>
+                    )}
                     {internship.tags && internship.tags.length > 0 && internship.tags.map((tagName) => {
                       const predefinedTags = [
                         { name: 'Dream Company', color: '#ef4444' },
@@ -172,6 +179,60 @@ function InternshipList({ internships, onUpdate, onDelete, dragMode = false }) {
                   <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed break-words">
                     {internship.notes}
                   </p>
+                </div>
+              )}
+
+              {internship.files && internship.files.length > 0 && (
+                <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4 border-l-4 border-blue-500 mt-3">
+                  <div className="flex items-center space-x-2 mb-2">
+                    <FileText className="h-4 w-4 text-blue-500" />
+                    <span className="text-sm font-medium text-blue-700 dark:text-blue-300">
+                      Attachments ({internship.files.length})
+                    </span>
+                  </div>
+                  <div className="space-y-2">
+                    {internship.files.map((file, index) => (
+                      <div key={index} className="flex items-center justify-between p-2 bg-white dark:bg-gray-800 rounded border">
+                        <div className="flex items-center space-x-2">
+                          <FileText className="h-3 w-3 text-gray-500" />
+                          <span className="text-xs text-gray-700 dark:text-gray-300 truncate">
+                            {file.name}
+                          </span>
+                          <span className="text-xs text-gray-500 dark:text-gray-400">
+                            ({(file.size / 1024 / 1024).toFixed(2)} MB)
+                          </span>
+                        </div>
+                                                 <a
+                           href={file.url}
+                           target="_blank"
+                           rel="noopener noreferrer"
+                           className="p-1 text-blue-500 hover:text-blue-700 transition-colors"
+                           title="Download file"
+                           onClick={async (e) => {
+                             // If it's a signed URL and might be expired, try to refresh it
+                             if (file.url.includes('/storage/v1/object/sign/') && file.path) {
+                               try {
+                                 const { data: newSignedUrl, error } = await supabase.storage
+                                   .from('internship-files')
+                                   .createSignedUrl(file.path, 3600)
+                                 
+                                 if (!error && newSignedUrl?.signedUrl) {
+                                   // Update the URL and open the new signed URL
+                                   window.open(newSignedUrl.signedUrl, '_blank')
+                                   e.preventDefault()
+                                 }
+                               } catch (error) {
+                                 console.error('Error refreshing signed URL:', error)
+                                 // Continue with original URL if refresh fails
+                               }
+                             }
+                           }}
+                         >
+                           <Download className="h-3 w-3" />
+                         </a>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               )}
             </div>

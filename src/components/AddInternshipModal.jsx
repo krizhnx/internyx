@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
-import { X, Building, User, MapPin, Calendar, FileText, Tag, Upload, DollarSign } from 'lucide-react'
+import { X, Building, User, MapPin, Calendar, FileText, Tag, Upload, DollarSign, Download, Trash2 } from 'lucide-react'
+import { supabase } from '../lib/supabase'
 
 function AddInternshipModal({ onClose, onAdd }) {
   const [formData, setFormData] = useState({
@@ -35,6 +36,26 @@ function AddInternshipModal({ onClose, onAdd }) {
   useEffect(() => {
     setIsVisible(true)
     setAvailableTags(predefinedTags)
+    
+    // Debug: List available buckets
+    const listBuckets = async () => {
+      const { data, error } = await supabase.storage.listBuckets()
+      if (error) {
+        console.error('Error listing buckets:', error)
+      } else {
+        console.log('Available buckets:', data)
+        
+        // If no buckets found, show instructions
+        if (data.length === 0) {
+          console.log('No buckets found. Please create the bucket manually in Supabase Dashboard.')
+          console.log('1. Go to Supabase Dashboard > Storage')
+          console.log('2. Create bucket named "internship-files"')
+          console.log('3. Set it to public')
+          console.log('4. Run the RLS policies from DatabaseSetup modal')
+        }
+      }
+    }
+    listBuckets()
   }, [])
 
   // Auto-save to localStorage
@@ -65,26 +86,108 @@ function AddInternshipModal({ onClose, onAdd }) {
         const fileExt = file.name.split('.').pop()
         const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`
         
-        // For now, we'll store file info in state
-        // In a real implementation, you'd upload to Supabase Storage
+        console.log('Attempting to upload to bucket: internship-files')
+        
+        // First, let's check what files are in the bucket
+        const { data: listData, error: listError } = await supabase.storage
+          .from('internship-files')
+          .list()
+        
+        if (listError) {
+          console.error('Error listing files in bucket:', listError)
+        } else {
+          console.log('Files in bucket:', listData)
+        }
+        
+        // Upload to Supabase Storage
+        const { data, error } = await supabase.storage
+          .from('internship-files')
+          .upload(fileName, file)
+        
+        if (error) {
+          console.error('Error uploading file:', error)
+          alert(`Failed to upload ${file.name}: ${error.message}`)
+          continue
+        }
+        
+        console.log('Upload successful, getting public URL...')
+        
+        // Get the public URL - use the correct bucket name
+        const { data: { publicUrl } } = supabase.storage
+          .from('internship-files')
+          .getPublicUrl(fileName)
+        
+        console.log('Uploaded file:', fileName, 'URL:', publicUrl)
+        
+        // Also try constructing the URL manually
+        const supabaseUrl = supabase.supabaseUrl
+        const manualUrl = `${supabaseUrl}/storage/v1/object/public/internship-files/${fileName}`
+        console.log('Manual URL:', manualUrl)
+        
+        // Try getting a signed URL as alternative
+        const { data: signedUrlData, error: signedUrlError } = await supabase.storage
+          .from('internship-files')
+          .createSignedUrl(fileName, 3600) // 1 hour expiry
+        
+        if (signedUrlError) {
+          console.error('Error getting signed URL:', signedUrlError)
+        } else {
+          console.log('Signed URL:', signedUrlData.signedUrl)
+        }
+        
+        // Test the signed URL to see if it's accessible
+        if (signedUrlData?.signedUrl) {
+          try {
+            const response = await fetch(signedUrlData.signedUrl, { method: 'HEAD' })
+            console.log('Signed URL accessibility test:', response.status, response.ok)
+          } catch (error) {
+            console.error('Signed URL test failed:', error)
+          }
+        }
+        
+        // Always use signed URL if available, otherwise fall back to public URL
+        const finalUrl = signedUrlData?.signedUrl || publicUrl || manualUrl
+        console.log('Final URL to be used:', finalUrl)
+        
         uploadedFileUrls.push({
           name: file.name,
           size: file.size,
           type: file.type,
-          url: URL.createObjectURL(file) // Temporary URL for preview
+          url: finalUrl,
+          path: fileName,
+          signedUrl: signedUrlData?.signedUrl // Store signed URL separately for future use
         })
       }
       
       setUploadedFiles(prev => [...prev, ...uploadedFileUrls])
     } catch (error) {
       console.error('Error uploading files:', error)
+      alert('Error uploading files. Please try again.')
     } finally {
       setFileUploading(false)
     }
   }
 
-  const removeFile = (index) => {
-    setUploadedFiles(prev => prev.filter((_, i) => i !== index))
+  const removeFile = async (index) => {
+    const fileToRemove = uploadedFiles[index]
+    
+    try {
+      // Delete from Supabase Storage
+      if (fileToRemove.path) {
+        const { error } = await supabase.storage
+          .from('internship-files')
+          .remove([fileToRemove.path])
+        
+        if (error) {
+          console.error('Error deleting file:', error)
+        }
+      }
+      
+      // Remove from local state
+      setUploadedFiles(prev => prev.filter((_, i) => i !== index))
+    } catch (error) {
+      console.error('Error removing file:', error)
+    }
   }
 
   const handleSubmit = async (e) => {
@@ -373,18 +476,32 @@ function AddInternshipModal({ onClose, onAdd }) {
                       <div key={index} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
                         <div className="flex items-center space-x-2">
                           <FileText className="h-4 w-4 text-gray-500" />
-                          <span className="text-sm text-gray-700 dark:text-gray-300">{file.name}</span>
-                          <span className="text-xs text-gray-500 dark:text-gray-400">
-                            ({(file.size / 1024 / 1024).toFixed(2)} MB)
-                          </span>
+                          <div className="flex flex-col">
+                            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{file.name}</span>
+                            <span className="text-xs text-gray-500 dark:text-gray-400">
+                              {(file.size / 1024 / 1024).toFixed(2)} MB • {file.type}
+                            </span>
+                          </div>
                         </div>
-                        <button
-                          type="button"
-                          onClick={() => removeFile(index)}
-                          className="text-red-500 hover:text-red-700 transition-colors"
-                        >
-                          <X className="h-4 w-4" />
-                        </button>
+                        <div className="flex items-center space-x-2">
+                          <a
+                            href={file.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="p-1 text-blue-500 hover:text-blue-700 transition-colors"
+                            title="Download file"
+                          >
+                            <Download className="h-4 w-4" />
+                          </a>
+                          <button
+                            type="button"
+                            onClick={() => removeFile(index)}
+                            className="p-1 text-red-500 hover:text-red-700 transition-colors"
+                            title="Remove file"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </div>
                       </div>
                     ))}
                   </div>

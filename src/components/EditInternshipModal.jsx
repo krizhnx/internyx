@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
-import { X, Building, User, MapPin, Calendar, FileText, Tag } from 'lucide-react'
+import { X, Building, User, MapPin, Calendar, FileText, Tag, DollarSign, Download, Trash2 } from 'lucide-react'
+import { supabase } from '../lib/supabase'
 
 function EditInternshipModal({ internship, onClose, onUpdate }) {
   const [formData, setFormData] = useState({
@@ -10,11 +11,13 @@ function EditInternshipModal({ internship, onClose, onUpdate }) {
     status: internship.status || 'applied',
     applied_date: internship.applied_date || '',
     deadline: internship.deadline || '',
+    salary: internship.salary || '',
     notes: internship.notes || '',
     tags: internship.tags || []
   })
   const [loading, setLoading] = useState(false)
   const [isVisible, setIsVisible] = useState(false)
+  const [files, setFiles] = useState(internship.files || [])
 
   // Predefined tags
   const predefinedTags = [
@@ -35,7 +38,11 @@ function EditInternshipModal({ internship, onClose, onUpdate }) {
     setLoading(true)
 
     try {
-      await onUpdate(formData)
+      const updateData = {
+        ...formData,
+        files: files // Include files in the update
+      }
+      await onUpdate(updateData)
     } catch (error) {
       console.error('Error updating internship:', error)
     } finally {
@@ -176,6 +183,25 @@ function EditInternshipModal({ internship, onClose, onUpdate }) {
                   <option value="rejected">Rejected</option>
                 </select>
               </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Salary
+                </label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <DollarSign className="h-5 w-5 text-gray-400" />
+                  </div>
+                  <input
+                    type="text"
+                    name="salary"
+                    value={formData.salary}
+                    onChange={handleChange}
+                    className="input-field pl-10"
+                    placeholder="e.g., 8000/month"
+                  />
+                </div>
+              </div>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
@@ -242,6 +268,63 @@ function EditInternshipModal({ internship, onClose, onUpdate }) {
                   </button>
                 ))}
               </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Attachments
+              </label>
+              {files && files.length > 0 ? (
+                <div className="space-y-2">
+                  {files.map((file, index) => (
+                    <div key={index} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                      <div className="flex items-center space-x-2">
+                        <FileText className="h-4 w-4 text-gray-500" />
+                        <div className="flex flex-col">
+                          <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{file.name}</span>
+                          <span className="text-xs text-gray-500 dark:text-gray-400">
+                            {(file.size / 1024 / 1024).toFixed(2)} MB • {file.type}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                                                 <a
+                           href={file.url}
+                           target="_blank"
+                           rel="noopener noreferrer"
+                           className="p-1 text-blue-500 hover:text-blue-700 transition-colors"
+                           title="Download file"
+                           onClick={async (e) => {
+                             // If it's a signed URL and might be expired, try to refresh it
+                             if (file.url.includes('/storage/v1/object/sign/') && file.path) {
+                               try {
+                                 const { data: newSignedUrl, error } = await supabase.storage
+                                   .from('internship-files')
+                                   .createSignedUrl(file.path, 3600)
+                                 
+                                 if (!error && newSignedUrl?.signedUrl) {
+                                   // Update the URL and open the new signed URL
+                                   window.open(newSignedUrl.signedUrl, '_blank')
+                                   e.preventDefault()
+                                 }
+                               } catch (error) {
+                                 console.error('Error refreshing signed URL:', error)
+                                 // Continue with original URL if refresh fails
+                               }
+                             }
+                           }}
+                         >
+                           <Download className="h-4 w-4" />
+                         </a>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-sm text-gray-500 dark:text-gray-400 italic">
+                  No attachments for this internship
+                </div>
+              )}
             </div>
 
             <div>

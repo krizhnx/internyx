@@ -157,11 +157,22 @@ function Homepage({ onGetStarted, onAbout }) {
       <footer className="bg-gray-900 border-t border-gray-700">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-            <div className="col-span-1 md:col-span-2">
-              <h3 className="text-2xl font-bold text-white mb-4">Internyx</h3>
-              <p className="text-gray-300 mb-4">
-                Empowering students to track and optimize their internship applications with ease.
-              </p>
+                         <div className="col-span-1 md:col-span-2">
+               <div className="flex items-center mb-2">
+                 <img 
+                   src="/internyx-white.svg" 
+                   alt="Internyx Logo" 
+                   className="h-10 w-auto object-contain dark:block hidden"
+                 />
+                 <img 
+                   src="/internyx-black.svg" 
+                   alt="Internyx Logo" 
+                   className="h-10 w-auto object-contain block dark:hidden"
+                 />
+               </div>
+               <p className="text-gray-300 mb-4">
+                 Empowering students to track and optimize their internship applications with ease.
+               </p>
               <div className="flex space-x-4">
                 <button className="text-gray-400 hover:text-white transition-colors">
                   <Mail className="h-5 w-5" />
