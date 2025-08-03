@@ -7,17 +7,20 @@ import Homepage from './components/Homepage'
 import About from './components/About'
 import Navbar from './components/Navbar'
 import Footer from './components/Footer'
+import { PageLoader } from './components/Loader'
 
 function App() {
   const [user, setUser] = useState(null)
   const [loading, setLoading] = useState(true)
   const [supabaseError, setSupabaseError] = useState(false)
+  const [showLoader, setShowLoader] = useState(true)
 
   useEffect(() => {
     // Check if Supabase is properly configured
     if (!import.meta.env.VITE_SUPABASE_URL || !import.meta.env.VITE_SUPABASE_ANON_KEY) {
       setSupabaseError(true)
       setLoading(false)
+      setShowLoader(false)
       return
     }
 
@@ -25,9 +28,16 @@ function App() {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null)
       setLoading(false)
+
+      // Add a random delay for better UX (1-3 seconds)
+      const randomDelay = Math.random() * 2000 + 1000
+      setTimeout(() => {
+        setShowLoader(false)
+      }, randomDelay)
     }).catch(() => {
       setSupabaseError(true)
       setLoading(false)
+      setShowLoader(false)
     })
 
     // Listen for auth changes
@@ -38,30 +48,37 @@ function App() {
     return () => subscription.unsubscribe()
   }, [])
 
+  if (showLoader) {
+    return <PageLoader message="Loading your experience..." />
+  }
+
   if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto mb-4"></div>
-          <p className="text-gray-600 dark:text-gray-400">Loading...</p>
-        </div>
-      </div>
-    )
+    return <PageLoader message="Initializing..." />
   }
 
   if (supabaseError) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
-        <div className="max-w-md w-full space-y-8">
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-gray-900 dark:via-blue-900/20 dark:to-purple-900/20 flex items-center justify-center">
+        <div className="max-w-md w-full space-y-8 p-8">
           <div className="text-center">
-            <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+            <div className="relative mb-6">
+              <div className="absolute inset-0 bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl blur opacity-75"></div>
+              <div className="relative bg-white dark:bg-gray-800 rounded-xl p-4">
+                <img
+                  src="/ChatGPT_Image_Aug_1__2025__07_16_07_PM-removebg-preview.png"
+                  alt="INTERNYX Logo"
+                  className="h-16 w-16 object-contain mx-auto"
+                />
+              </div>
+            </div>
+            <h2 className="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-4">
               Configuration Required
             </h2>
-            <p className="mt-2 text-gray-600 dark:text-gray-400">
+            <p className="text-gray-600 dark:text-gray-400 mb-6">
               Please set up your Supabase environment variables in the .env file:
             </p>
-            <div className="mt-4 p-4 bg-gray-100 dark:bg-gray-800 rounded-lg text-left">
-              <code className="text-sm">
+            <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-lg border border-gray-200 dark:border-gray-700">
+              <code className="text-sm text-gray-700 dark:text-gray-300">
                 VITE_SUPABASE_URL=your_supabase_url<br/>
                 VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
               </code>
@@ -74,7 +91,7 @@ function App() {
 
   return (
     <Router>
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col">
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-gray-900 dark:via-blue-900/20 dark:to-purple-900/20 flex flex-col">
         {user ? (
           <>
             <Navbar user={user} />
@@ -88,8 +105,15 @@ function App() {
           </>
         ) : (
           <Routes>
-            <Route path="/" element={<Homepage onGetStarted={() => window.location.href = '/auth'} onAbout={() => window.location.href = '/about'} />} />
-            <Route path="/about" element={<About onBack={() => window.location.href = '/'} />} />
+            <Route path="/" element={
+              <Homepage
+                onGetStarted={() => window.location.href = '/auth'}
+                onAbout={() => window.location.href = '/about'}
+              />
+            } />
+            <Route path="/about" element={
+              <About onBack={() => window.location.href = '/'} />
+            } />
             <Route path="/auth" element={<Auth />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
@@ -99,4 +123,4 @@ function App() {
   )
 }
 
-export default App 
+export default App
