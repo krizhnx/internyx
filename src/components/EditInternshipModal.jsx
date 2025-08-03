@@ -19,9 +19,10 @@ function EditInternshipModal({ internship, onClose, onUpdate }) {
   const [isVisible, setIsVisible] = useState(false)
   const [files, setFiles] = useState(internship.files || [])
   const [fileUploading, setFileUploading] = useState(false)
+  const [availableTags, setAvailableTags] = useState([])
   const fileInputRef = useRef(null)
 
-  // Predefined tags
+  // Predefined tags for fallback only (not for UI display)
   const predefinedTags = [
     { name: 'Dream Company', color: '#ef4444' },
     { name: 'Priority', color: '#f59e0b' },
@@ -31,8 +32,30 @@ function EditInternshipModal({ internship, onClose, onUpdate }) {
     { name: 'Startup', color: '#ec4899' }
   ]
 
+  const fetchCustomTags = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('tags')
+        .select('*')
+        .order('name')
+
+      if (error) {
+        console.error('Error fetching tags:', error)
+        setAvailableTags([]) // Don't show hardcoded tags
+        return
+      }
+
+      // Only use database tags
+      setAvailableTags(data || [])
+    } catch (error) {
+      console.error('Error fetching tags:', error)
+      setAvailableTags([]) // Don't show hardcoded tags
+    }
+  }
+
   useEffect(() => {
     setIsVisible(true)
+    fetchCustomTags()
   }, [])
 
   const handleFileUpload = async (event) => {
@@ -329,7 +352,7 @@ function EditInternshipModal({ internship, onClose, onUpdate }) {
                 Tags
               </label>
               <div className="flex flex-wrap gap-2">
-                {predefinedTags.map((tag) => (
+                {availableTags.map((tag) => (
                   <button
                     key={tag.name}
                     type="button"

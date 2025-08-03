@@ -23,7 +23,7 @@ function AddInternshipModal({ onClose, onAdd }) {
 
   const fileInputRef = useRef(null)
 
-  // Predefined tags
+  // Predefined tags for fallback only (not for UI display)
   const predefinedTags = [
     { name: 'Dream Company', color: '#ef4444' },
     { name: 'Priority', color: '#f59e0b' },
@@ -33,9 +33,30 @@ function AddInternshipModal({ onClose, onAdd }) {
     { name: 'Startup', color: '#ec4899' }
   ]
 
+  const fetchCustomTags = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('tags')
+        .select('*')
+        .order('name')
+
+      if (error) {
+        console.error('Error fetching tags:', error)
+        setAvailableTags([]) // Don't show hardcoded tags
+        return
+      }
+
+      // Only use database tags
+      setAvailableTags(data || [])
+    } catch (error) {
+      console.error('Error fetching tags:', error)
+      setAvailableTags([]) // Don't show hardcoded tags
+    }
+  }
+
   useEffect(() => {
     setIsVisible(true)
-    setAvailableTags(predefinedTags)
+    fetchCustomTags()
 
     // Check if bucket exists
     const checkBucket = async () => {
@@ -409,7 +430,7 @@ function AddInternshipModal({ onClose, onAdd }) {
                 Tags
               </label>
               <div className="flex flex-wrap gap-2">
-                {predefinedTags.map((tag) => (
+                {availableTags.map((tag) => (
                   <button
                     key={tag.name}
                     type="button"
@@ -530,6 +551,23 @@ function AddInternshipModal({ onClose, onAdd }) {
                 className="btn-secondary flex-1 btn-animate"
               >
                 Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  const savedData = {
+                    ...formData,
+                    status: 'saved',
+                    saved_date: new Date().toISOString(),
+                    saved_notes: formData.notes,
+                    priority: 'medium'
+                  }
+                  onAdd(savedData)
+                }}
+                disabled={loading || !formData.company_name || !formData.role}
+                className="btn-secondary flex-1 disabled:opacity-50 disabled:cursor-not-allowed btn-animate"
+              >
+                Save for Later
               </button>
               <button
                 type="submit"

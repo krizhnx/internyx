@@ -4,17 +4,28 @@ import { supabase } from '../lib/supabase'
 import EditInternshipModal from './EditInternshipModal'
 import SortableInternshipCard from './SortableInternshipCard'
 
-function InternshipList({ internships, onUpdate, onDelete, dragMode = false }) {
+function InternshipList({ internships, onUpdate, onDelete, onMarkAsApplied, dragMode = false }) {
   const [editingInternship, setEditingInternship] = useState(null)
   const [deleteConfirm, setDeleteConfirm] = useState(null)
 
   const getStatusBadge = (status) => {
     const baseClasses = "inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold"
     switch (status) {
+      case 'saved': return `${baseClasses} bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300 border border-purple-200 dark:border-purple-800`
       case 'applied': return `${baseClasses} bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300 border border-blue-200 dark:border-blue-800`
       case 'interviewing': return `${baseClasses} bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300 border border-yellow-200 dark:border-yellow-800`
       case 'offer': return `${baseClasses} bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300 border border-green-200 dark:border-green-800`
       case 'rejected': return `${baseClasses} bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300 border border-red-200 dark:border-red-800`
+      default: return `${baseClasses} bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-300 border border-gray-200 dark:border-gray-700`
+    }
+  }
+
+  const getPriorityBadge = (priority) => {
+    const baseClasses = "inline-flex items-center px-2 py-1 rounded-full text-xs font-medium"
+    switch (priority) {
+      case 'high': return `${baseClasses} bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300 border border-red-200 dark:border-red-800`
+      case 'medium': return `${baseClasses} bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300 border border-yellow-200 dark:border-yellow-800`
+      case 'low': return `${baseClasses} bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300 border border-green-200 dark:border-green-800`
       default: return `${baseClasses} bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-300 border border-gray-200 dark:border-gray-700`
     }
   }
@@ -121,6 +132,11 @@ function InternshipList({ internships, onUpdate, onDelete, dragMode = false }) {
                         <span className={getStatusBadge(internship.status)}>
                           {internship.status.charAt(0).toUpperCase() + internship.status.slice(1)}
                         </span>
+                        {internship.status === 'saved' && internship.priority && (
+                          <span className={getPriorityBadge(internship.priority)}>
+                            {internship.priority.charAt(0).toUpperCase() + internship.priority.slice(1)} Priority
+                          </span>
+                        )}
                         {internship.deadline && getDeadlineStatus(internship.deadline) && (
                           <span className={`inline-flex items-center space-x-1 px-2.5 py-1 rounded-full text-xs font-semibold border ${getDeadlineStatus(internship.deadline).color}`}>
                             <Clock className="h-3 w-3" />
@@ -202,80 +218,102 @@ function InternshipList({ internships, onUpdate, onDelete, dragMode = false }) {
                           </div>
                         </div>
                       )}
+
+                      {/* Notes */}
+                      {internship.notes && (
+                        <div className="bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 rounded-xl p-4 border-l-4 border-blue-500 mt-4">
+                          <div className="flex items-center space-x-2 mb-2">
+                            <FileText className="h-4 w-4 text-blue-500" />
+                            <span className="text-sm font-semibold text-blue-700 dark:text-blue-300">Notes</span>
+                          </div>
+                          <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed break-words">
+                            {internship.notes}
+                          </p>
+                        </div>
+                      )}
+
+                      {/* Saved Notes */}
+                      {internship.status === 'saved' && internship.saved_notes && (
+                        <div className="bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 rounded-xl p-4 border-l-4 border-purple-500 mt-4">
+                          <div className="flex items-center space-x-2 mb-2">
+                            <FileText className="h-4 w-4 text-purple-500" />
+                            <span className="text-sm font-semibold text-purple-700 dark:text-purple-300">Saved Notes</span>
+                          </div>
+                          <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed break-words">
+                            {internship.saved_notes}
+                          </p>
+                        </div>
+                      )}
+
+                      {/* Files */}
+                      {internship.files && internship.files.length > 0 && (
+                        <div className="bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 rounded-xl p-4 border-l-4 border-green-500 mt-4">
+                          <div className="flex items-center space-x-2 mb-3">
+                            <FileText className="h-4 w-4 text-green-500" />
+                            <span className="text-sm font-semibold text-green-700 dark:text-green-300">
+                              Attachments ({internship.files.length})
+                            </span>
+                          </div>
+                          <div className="space-y-2">
+                            {internship.files.map((file, index) => (
+                              <div key={index} className="flex items-center justify-between p-3 bg-white/50 dark:bg-gray-800/50 rounded-lg border border-gray-200/50 dark:border-gray-700/50 hover:bg-white dark:hover:bg-gray-700 transition-colors">
+                                <div className="flex items-center space-x-3">
+                                  <FileText className="h-4 w-4 text-gray-500" />
+                                  <div>
+                                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300 truncate block">
+                                      {file.name}
+                                    </span>
+                                    <span className="text-xs text-gray-500 dark:text-gray-400">
+                                      ({(file.size / 1024 / 1024).toFixed(2)} MB)
+                                    </span>
+                                  </div>
+                                </div>
+                                <a
+                                  href={file.url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="p-2 text-green-500 hover:text-green-700 hover:bg-green-50 dark:hover:bg-green-900/20 rounded-lg transition-all duration-200"
+                                  title="Download file"
+                                  onClick={async (e) => {
+                                    if (file.url.includes('/storage/v1/object/sign/') && file.path) {
+                                      try {
+                                        const { data: newSignedUrl, error } = await supabase.storage
+                                          .from('internship-files')
+                                          .createSignedUrl(file.path, 3600)
+
+                                        if (!error && newSignedUrl?.signedUrl) {
+                                          window.open(newSignedUrl.signedUrl, '_blank')
+                                          e.preventDefault()
+                                        }
+                                      } catch (error) {
+                                        console.error('Error refreshing signed URL:', error)
+                                      }
+                                    }
+                                  }}
+                                >
+                                  <Download className="h-4 w-4" />
+                                </a>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
-
-                  {/* Notes */}
-                  {internship.notes && (
-                    <div className="bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 rounded-xl p-4 border-l-4 border-blue-500 mt-4 ml-0 sm:ml-0">
-                      <div className="flex items-center space-x-2 mb-2">
-                        <FileText className="h-4 w-4 text-blue-500" />
-                        <span className="text-sm font-semibold text-blue-700 dark:text-blue-300">Notes</span>
-                      </div>
-                      <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed break-words">
-                        {internship.notes}
-                      </p>
-                    </div>
-                  )}
-
-                  {/* Files */}
-                  {internship.files && internship.files.length > 0 && (
-                    <div className="bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 rounded-xl p-4 border-l-4 border-green-500 mt-4 ml-0 sm:ml-0">
-                      <div className="flex items-center space-x-2 mb-3">
-                        <FileText className="h-4 w-4 text-green-500" />
-                        <span className="text-sm font-semibold text-green-700 dark:text-green-300">
-                          Attachments ({internship.files.length})
-                        </span>
-                      </div>
-                      <div className="space-y-2">
-                        {internship.files.map((file, index) => (
-                          <div key={index} className="flex items-center justify-between p-3 bg-white/50 dark:bg-gray-800/50 rounded-lg border border-gray-200/50 dark:border-gray-700/50 hover:bg-white dark:hover:bg-gray-700 transition-colors">
-                            <div className="flex items-center space-x-3">
-                              <FileText className="h-4 w-4 text-gray-500" />
-                              <div>
-                                <span className="text-sm font-medium text-gray-700 dark:text-gray-300 truncate block">
-                                  {file.name}
-                                </span>
-                                <span className="text-xs text-gray-500 dark:text-gray-400">
-                                  ({(file.size / 1024 / 1024).toFixed(2)} MB)
-                                </span>
-                              </div>
-                            </div>
-                            <a
-                              href={file.url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="p-2 text-green-500 hover:text-green-700 hover:bg-green-50 dark:hover:bg-green-900/20 rounded-lg transition-all duration-200"
-                              title="Download file"
-                              onClick={async (e) => {
-                                if (file.url.includes('/storage/v1/object/sign/') && file.path) {
-                                  try {
-                                    const { data: newSignedUrl, error } = await supabase.storage
-                                      .from('internship-files')
-                                      .createSignedUrl(file.path, 3600)
-
-                                    if (!error && newSignedUrl?.signedUrl) {
-                                      window.open(newSignedUrl.signedUrl, '_blank')
-                                      e.preventDefault()
-                                    }
-                                  } catch (error) {
-                                    console.error('Error refreshing signed URL:', error)
-                                  }
-                                }
-                              }}
-                            >
-                              <Download className="h-4 w-4" />
-                            </a>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
                 </div>
 
                 {/* Right Column - Actions */}
                 <div className="flex flex-col items-center space-y-4 lg:flex-shrink-0 lg:items-end">
                   <div className="flex items-center space-x-2">
+                    {internship.status === 'saved' && onMarkAsApplied && (
+                      <button
+                        onClick={() => onMarkAsApplied(internship.id)}
+                        className="p-3 text-gray-400 hover:text-green-600 dark:hover:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/20 rounded-xl transition-all duration-200 group-hover:scale-105"
+                        title="Mark as Applied"
+                      >
+                        <Calendar className="h-5 w-5" />
+                      </button>
+                    )}
                     <button
                       onClick={() => handleEdit(internship)}
                       className="p-3 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-xl transition-all duration-200 group-hover:scale-105"
@@ -293,7 +331,11 @@ function InternshipList({ internships, onUpdate, onDelete, dragMode = false }) {
                   </div>
 
                   <div className="text-xs text-gray-500 dark:text-gray-400 text-center lg:text-right">
-                    Created on {new Date(internship.created_at).toLocaleDateString()}
+                    {internship.status === 'saved' ? (
+                      <>Saved on {new Date(internship.saved_date || internship.created_at).toLocaleDateString()}</>
+                    ) : (
+                      <>Created on {new Date(internship.created_at).toLocaleDateString()}</>
+                    )}
                   </div>
                 </div>
               </div>

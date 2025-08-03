@@ -77,16 +77,14 @@ function Auth() {
   }
 
   return (
-    <div className={`min-h-screen transition-all duration-1000 ${isVisible ? 'opacity-100' : 'opacity-0'}`}>
+    <div className={`h-screen overflow-hidden transition-all duration-1000 ${isVisible ? 'opacity-100' : 'opacity-0'}`}>
       {/* Background */}
       <div className="absolute inset-0 bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-gray-900 dark:via-blue-900/20 dark:to-purple-900/20">
-        <div className="absolute top-0 left-0 w-72 h-72 bg-purple-300 dark:bg-purple-600/30 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-blob"></div>
-        <div className="absolute top-0 right-0 w-72 h-72 bg-yellow-300 dark:bg-yellow-600/30 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-blob animation-delay-2000"></div>
-        <div className="absolute -bottom-8 left-20 w-72 h-72 bg-pink-300 dark:bg-pink-600/30 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-blob animation-delay-4000"></div>
+        {/* Removed blob animations */}
       </div>
 
       {/* Navigation */}
-      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6">
+      <div className="relative z-50 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4">
         <div className="flex justify-between items-center">
           <button
             onClick={() => window.location.href = '/'}
@@ -107,18 +105,18 @@ function Auth() {
       </div>
 
       {/* Auth Form */}
-      <div className="relative z-10 min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+      <div className="relative z-10 h-full flex items-center justify-center px-4 sm:px-6 lg:px-8 -mt-28">
         <div className="max-w-md w-full">
           {/* Header */}
-          <div className="text-center mb-8">
-            <div className="mb-6">
+          <div className="text-center mb-6">
+            <div className="mb-0">
               <img
                 src={isDarkMode ? "/internyx-white.svg" : "/internyx-black.svg"}
                 alt="Logo"
-                className="h-40 w-40 object-contain mx-auto -mb-16"
+                className="h-40 w-40 object-contain mx-auto"
               />
             </div>
-            <div className="inline-flex items-center space-x-2 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-full px-4 py-2 mt-4 shadow-lg">
+            <div className="inline-flex items-center space-x-2 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-full px-4 py-2 shadow-lg">
               <Sparkles className="h-4 w-4 text-yellow-500" />
               <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
                 {isLogin ? 'Welcome back!' : 'Join our community'}
@@ -129,8 +127,8 @@ function Auth() {
           {/* Form Card */}
           <div className="relative">
             <div className="absolute inset-0 bg-gradient-to-r from-blue-600 to-purple-600 rounded-3xl blur opacity-20"></div>
-            <div className="relative bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-3xl p-8 shadow-2xl border border-white/20 dark:border-gray-700/20">
-              <form className="space-y-6" onSubmit={handleAuth}>
+            <div className="relative bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-3xl p-6 shadow-2xl border border-white/20 dark:border-gray-700/20">
+              <form className="space-y-4" onSubmit={handleAuth}>
                 {!isLogin && (
                   <div>
                     <label htmlFor="username" className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
@@ -207,12 +205,12 @@ function Auth() {
                 </div>
 
                 {message && (
-                  <div className={`flex items-center space-x-2 p-4 rounded-xl text-sm ${
-                    message.includes('error') || message.includes('Error')
+                  <div className={`flex items-center space-x-2 p-3 rounded-xl text-sm ${
+                    message.includes('error') || message.includes('Error') || message.includes('Invalid') || message.includes('invalid')
                       ? 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 border border-red-200 dark:border-red-800'
                       : 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 border border-green-200 dark:border-green-800'
                   }`}>
-                    {message.includes('error') || message.includes('Error') ? (
+                    {message.includes('error') || message.includes('Error') || message.includes('Invalid') || message.includes('invalid') ? (
                       <AlertCircle className="h-5 w-5 flex-shrink-0" />
                     ) : (
                       <CheckCircle className="h-5 w-5 flex-shrink-0" />
@@ -225,7 +223,7 @@ function Auth() {
                   <button
                     type="submit"
                     disabled={loading}
-                    className="group w-full px-6 py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+                    className="group w-full px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
                   >
                     {loading ? (
                       <ButtonLoader size="sm" />
@@ -239,7 +237,7 @@ function Auth() {
                 </div>
               </form>
 
-              <div className="mt-8 text-center">
+              <div className="mt-6 text-center">
                 <button
                   onClick={() => setIsLogin(!isLogin)}
                   className="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-medium transition-colors duration-200"
@@ -251,22 +249,22 @@ function Auth() {
           </div>
 
           {/* Features */}
-          <div className="mt-8 grid grid-cols-3 gap-4">
-            <div className="text-center p-4 rounded-xl bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm">
-              <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-500 rounded-lg flex items-center justify-center mx-auto mb-2">
-                <Shield className="h-4 w-4 text-white" />
+          <div className="mt-6 grid grid-cols-3 gap-3">
+            <div className="text-center p-3 rounded-xl bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm">
+              <div className="w-6 h-6 bg-gradient-to-r from-blue-500 to-purple-500 rounded-lg flex items-center justify-center mx-auto mb-1">
+                <Shield className="h-3 w-3 text-white" />
               </div>
               <p className="text-xs text-gray-600 dark:text-gray-400">Secure</p>
             </div>
-            <div className="text-center p-4 rounded-xl bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm">
-              <div className="w-8 h-8 bg-gradient-to-r from-green-500 to-emerald-500 rounded-lg flex items-center justify-center mx-auto mb-2">
-                <CheckCircle className="h-4 w-4 text-white" />
+            <div className="text-center p-3 rounded-xl bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm">
+              <div className="w-6 h-6 bg-gradient-to-r from-green-500 to-emerald-500 rounded-lg flex items-center justify-center mx-auto mb-1">
+                <CheckCircle className="h-3 w-3 text-white" />
               </div>
               <p className="text-xs text-gray-600 dark:text-gray-400">Reliable</p>
             </div>
-            <div className="text-center p-4 rounded-xl bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm">
-              <div className="w-8 h-8 bg-gradient-to-r from-purple-500 to-pink-500 rounded-lg flex items-center justify-center mx-auto mb-2">
-                <Sparkles className="h-4 w-4 text-white" />
+            <div className="text-center p-3 rounded-xl bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm">
+              <div className="w-6 h-6 bg-gradient-to-r from-purple-500 to-pink-500 rounded-lg flex items-center justify-center mx-auto mb-1">
+                <Sparkles className="h-3 w-3 text-white" />
               </div>
               <p className="text-xs text-gray-600 dark:text-gray-400">Fast</p>
             </div>

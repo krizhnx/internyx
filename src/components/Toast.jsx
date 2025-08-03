@@ -53,10 +53,10 @@ function Toast({ message, isVisible, onClose, type = 'success' }) {
   if (!shouldRender) return null
 
   return (
-    <div className="fixed top-4 right-4 z-50">
+    <div className="fixed top-10 right-4 z-50">
       <div className={`${getBackgroundColor()} border rounded-lg shadow-lg p-4 max-w-sm transform transition-all duration-300 ease-out ${
-        isAnimating 
-          ? 'translate-x-0 opacity-100 scale-100' 
+        isAnimating
+          ? 'translate-x-0 opacity-100 scale-100'
           : 'translate-x-full opacity-0 scale-95'
       }`}>
         <div className="flex items-start space-x-3">
@@ -81,4 +81,4 @@ function Toast({ message, isVisible, onClose, type = 'success' }) {
   )
 }
 
-export default Toast 
+export default Toast

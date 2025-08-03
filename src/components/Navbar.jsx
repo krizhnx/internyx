@@ -44,22 +44,8 @@ function Navbar({ user }) {
   }
 
   const handleLogout = async () => {
-    try {
-      console.log('Attempting to sign out...')
-      const { error } = await supabase.auth.signOut()
-      if (error) {
-        console.error('Error signing out:', error)
-        alert('Error signing out. Please try again.')
-      } else {
-        console.log('Successfully signed out')
-        // Force a page reload to ensure clean state
-        window.location.href = '/'
-      }
-      handleCloseMenu()
-    } catch (error) {
-      console.error('Unexpected error during sign out:', error)
-      alert('Unexpected error during sign out. Please try again.')
-    }
+    await supabase.auth.signOut()
+    handleCloseMenu()
   }
 
   const handleSettingsClick = () => {

@@ -4,11 +4,13 @@ import Analytics from './Analytics'
 import InternshipList from './InternshipList'
 import TableView from './TableView'
 import AddInternshipModal from './AddInternshipModal'
+import EditInternshipModal from './EditInternshipModal'
+import SaveInternshipModal from './SaveInternshipModal'
 import ExportData from './ExportData'
 import DatabaseSetup from './DatabaseSetup'
 import Toast from './Toast'
 import Pagination from './Pagination'
-import { Plus, Search, X, Filter, RotateCcw, Tag, GripVertical, Move, Layout, Table } from 'lucide-react'
+import { Plus, Search, X, Filter, RotateCcw, Tag, GripVertical, Move, Layout, Table, AlertTriangle, Bookmark } from 'lucide-react'
 import {
   DndContext,
   closestCenter,
@@ -31,6 +33,7 @@ function Dashboard({ user }) {
   const [internships, setInternships] = useState([])
   const [loading, setLoading] = useState(true)
   const [showAddModal, setShowAddModal] = useState(false)
+  const [showSaveModal, setShowSaveModal] = useState(false)
   const [showDatabaseSetup, setShowDatabaseSetup] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
@@ -39,18 +42,22 @@ function Dashboard({ user }) {
   const [toast, setToast] = useState({ show: false, message: '', type: 'success' })
   const [showAddTagModal, setShowAddTagModal] = useState(false)
   const [newTag, setNewTag] = useState({ name: '', color: '#6b7280' })
+  const [customTags, setCustomTags] = useState([])
+  const [deleteConfirm, setDeleteConfirm] = useState(null)
+  const [deleteTagConfirm, setDeleteTagConfirm] = useState(null)
   const [isDragging, setIsDragging] = useState(false)
   const [dragMode, setDragMode] = useState(false)
   const [viewMode, setViewMode] = useState(localStorage.getItem('defaultView') || 'card')
   const [currentPage, setCurrentPage] = useState(1)
   const [itemsPerPage, setItemsPerPage] = useState(parseInt(localStorage.getItem('itemsPerPage')) || 10)
+  const [activeTab, setActiveTab] = useState('all') // 'all' or 'saved'
 
   const sensors = useSensors(
     useSensor(PointerSensor),
     useSensor(KeyboardSensor)
   )
 
-  // Predefined tags for filtering
+  // Predefined tags for initialization only (not for UI display)
   const predefinedTags = [
     { name: 'Dream Company', color: '#ef4444' },
     { name: 'Priority', color: '#f59e0b' },
@@ -62,6 +69,7 @@ function Dashboard({ user }) {
 
   useEffect(() => {
     fetchInternships()
+    fetchCustomTags()
   }, [user])
 
   useEffect(() => {
@@ -115,32 +123,43 @@ function Dashboard({ user }) {
 
   const addInternship = async (internshipData) => {
     try {
-      console.log('Adding internship with data:', internshipData)
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from('internships')
-        .insert([{ ...internshipData, user_id: user.id }])
-        .select()
+        .insert([internshipData])
 
       if (error) {
-        console.error('Supabase error:', error)
-        if (error.code === '42P01') {
-          showToast('Database table not set up. Please run the SQL setup.')
-          setShowDatabaseSetup(true)
-        } else if (error.code === '42703') {
-          showToast('Database schema outdated. Please run the migration script.')
-        } else {
-          showToast(`Error adding internship: ${error.message}`)
-        }
+        console.error('Error adding internship:', error)
+        showToast('Error adding internship. Please try again.', 'error')
         return
       }
 
-      console.log('Internship added successfully:', data)
       await fetchInternships()
-      setShowAddModal(false)
       showToast('Internship added successfully!')
+      setShowAddModal(false)
     } catch (error) {
       console.error('Error adding internship:', error)
-      showToast('Error adding internship. Please try again.')
+      showToast('Error adding internship. Please try again.', 'error')
+    }
+  }
+
+  const saveInternship = async (internshipData) => {
+    try {
+      const { error } = await supabase
+        .from('internships')
+        .insert([internshipData])
+
+      if (error) {
+        console.error('Error saving internship:', error)
+        showToast('Error saving internship. Please try again.', 'error')
+        return
+      }
+
+      await fetchInternships()
+      showToast('Internship saved successfully!')
+      setShowSaveModal(false)
+    } catch (error) {
+      console.error('Error saving internship:', error)
+      showToast('Error saving internship. Please try again.', 'error')
     }
   }
 
@@ -222,24 +241,19 @@ function Dashboard({ user }) {
     }
 
     try {
-      // First check if tags table exists
-      const { data: tableCheck, error: tableError } = await supabase
-        .from('tags')
-        .select('count')
-        .limit(1)
-
-      if (tableError && tableError.code === '42P01') {
-        showToast('Tags table not set up. Please run the SQL setup first.')
-        setShowDatabaseSetup(true)
+      // Check if tag already exists
+      const existingTag = customTags.find(tag => tag.name.toLowerCase() === newTag.name.trim().toLowerCase())
+      if (existingTag) {
+        showToast('Tag already exists')
         return
       }
 
       const { error } = await supabase
         .from('tags')
         .insert([{
-          ...newTag,
-          user_id: user.id,
-          name: newTag.name.trim()
+          name: newTag.name.trim(),
+          color: newTag.color,
+          user_id: user.id
         }])
 
       if (error) {
@@ -251,6 +265,7 @@ function Dashboard({ user }) {
       showToast('Tag added successfully!')
       setShowAddTagModal(false)
       setNewTag({ name: '', color: '#6b7280' })
+      fetchCustomTags() // Refresh custom tags after adding
     } catch (error) {
       console.error('Error adding tag:', error)
       showToast('Failed to add tag. Please try again.')
@@ -259,17 +274,71 @@ function Dashboard({ user }) {
 
   const deleteTag = async (tagName) => {
     try {
-      const { error } = await supabase
+      // Remove the tag from all internships that have it
+      const internshipsToUpdate = internships.filter(internship =>
+        internship.tags && internship.tags.includes(tagName)
+      )
+
+      for (const internship of internshipsToUpdate) {
+        const updatedTags = internship.tags.filter(tag => tag !== tagName)
+        await supabase
+          .from('internships')
+          .update({ tags: updatedTags })
+          .eq('id', internship.id)
+      }
+
+      // Delete the tag from the tags table
+      const { error: deleteError } = await supabase
         .from('tags')
         .delete()
         .eq('name', tagName)
         .eq('user_id', user.id)
 
-      if (error) throw error
-      showToast('Tag deleted successfully!')
+      if (deleteError) {
+        console.error('Error deleting tag from database:', deleteError)
+        showToast('Error deleting tag. Please try again.', 'error')
+        return
+      }
+
+      // Remove the tag from selected filters
+      setSelectedTags(selectedTags.filter(tag => tag !== tagName))
+
+      // Refresh the internships list and custom tags
+      await fetchInternships()
+      fetchCustomTags()
+      showToast(`Tag "${tagName}" deleted successfully`)
+      setDeleteTagConfirm(null)
     } catch (error) {
       console.error('Error deleting tag:', error)
-      showToast('Error deleting tag. Please try again.')
+      showToast('Error deleting tag. Please try again.', 'error')
+    }
+  }
+
+  const confirmDeleteTag = (tagName) => {
+    setDeleteTagConfirm(tagName)
+  }
+
+  const markAsApplied = async (internshipId) => {
+    try {
+      const { error } = await supabase
+        .from('internships')
+        .update({
+          status: 'applied',
+          applied_date: new Date().toISOString().split('T')[0] // Set today as applied date
+        })
+        .eq('id', internshipId)
+
+      if (error) {
+        console.error('Error marking as applied:', error)
+        showToast('Error marking as applied. Please try again.', 'error')
+        return
+      }
+
+      await fetchInternships()
+      showToast('Internship marked as applied!')
+    } catch (error) {
+      console.error('Error marking as applied:', error)
+      showToast('Error marking as applied. Please try again.', 'error')
     }
   }
 
@@ -485,11 +554,12 @@ function Dashboard({ user }) {
                          internship.role.toLowerCase().includes(searchTerm.toLowerCase())
     const matchesStatus = statusFilter === 'all' || internship.status === statusFilter
     const matchesLocation = locationFilter === 'all' || internship.location === locationFilter
-    const matchesTags = selectedTags.length === 0 || selectedTags.some(tag =>
+    const matchesTags = selectedTags.length === 0 || selectedTags.every(tag =>
       internship.tags && internship.tags.includes(tag)
     )
+    const matchesTab = activeTab === 'all' || internship.status === activeTab
 
-    return matchesSearch && matchesStatus && matchesLocation && matchesTags
+    return matchesSearch && matchesStatus && matchesLocation && matchesTags && matchesTab
   })
 
   const hasActiveFilters = searchTerm || statusFilter !== 'all' || locationFilter !== 'all' || selectedTags.length > 0
@@ -508,6 +578,54 @@ function Dashboard({ user }) {
     setItemsPerPage(newItemsPerPage)
     setCurrentPage(1)
     localStorage.setItem('itemsPerPage', newItemsPerPage.toString())
+  }
+
+  const fetchCustomTags = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('tags')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('name')
+
+      if (error) {
+        console.error('Error fetching tags:', error)
+        return
+      }
+
+      setCustomTags(data || [])
+
+      // Initialize predefined tags if user has no tags
+      if (!data || data.length === 0) {
+        await initializePredefinedTags()
+      }
+    } catch (error) {
+      console.error('Error fetching tags:', error)
+    }
+  }
+
+  const initializePredefinedTags = async () => {
+    try {
+      const predefinedTagsToInsert = predefinedTags.map(tag => ({
+        name: tag.name,
+        color: tag.color,
+        user_id: user.id
+      }))
+
+      const { error } = await supabase
+        .from('tags')
+        .insert(predefinedTagsToInsert)
+
+      if (error) {
+        console.error('Error initializing predefined tags:', error)
+        return
+      }
+
+      // Refresh the tags list
+      await fetchCustomTags()
+    } catch (error) {
+      console.error('Error initializing predefined tags:', error)
+    }
   }
 
   if (loading) {
@@ -576,13 +694,44 @@ function Dashboard({ user }) {
               <span>Add Internship</span>
             </button>
             <button
-              onClick={addTestInternships}
-              className="bg-green-100 dark:bg-green-900/20 text-green-700 dark:text-green-300 hover:bg-green-200 dark:hover:bg-green-800/30 flex items-center space-x-2 px-3 py-2 rounded-lg transition-colors"
-              title="Add 15 test internships"
+              onClick={() => setShowSaveModal(true)}
+              className="btn-secondary flex items-center space-x-2"
             >
-              <span className="text-sm font-medium">Add Test Data</span>
+              <Bookmark className="h-4 w-4" />
+              <span className="hidden sm:inline">Save Internship</span>
+            </button>
+            <button
+              onClick={addTestInternships}
+              className="btn-secondary flex items-center space-x-2"
+            >
+              <RotateCcw className="h-4 w-4" />
+              <span className="hidden sm:inline">Add Test Data</span>
             </button>
           </div>
+        </div>
+
+        {/* Tab Navigation */}
+        <div className="flex space-x-1 bg-gray-100 dark:bg-gray-800 rounded-xl p-1">
+          <button
+            onClick={() => setActiveTab('all')}
+            className={`flex-1 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+              activeTab === 'all'
+                ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm'
+                : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100'
+            }`}
+          >
+            All ({internships.length})
+          </button>
+          <button
+            onClick={() => setActiveTab('saved')}
+            className={`flex-1 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+              activeTab === 'saved'
+                ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm'
+                : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100'
+            }`}
+          >
+            Saved ({internships.filter(i => i.status === 'saved').length})
+          </button>
         </div>
 
         {/* Filters */}
@@ -678,29 +827,36 @@ function Dashboard({ user }) {
                 </button>
               </div>
               <div className="flex flex-wrap gap-2 justify-center sm:justify-start">
-                {predefinedTags.map((tag) => (
-                  <button
-                    key={tag.name}
-                    onClick={() => toggleTag(tag.name)}
-                    className={`group relative flex items-center space-x-2 px-3 py-2 rounded-full text-sm font-medium transition-all duration-200 ${
-                      selectedTags.includes(tag.name)
-                        ? 'text-white shadow-md'
-                        : 'hover:shadow-sm'
-                    }`}
-                    style={{
-                      backgroundColor: selectedTags.includes(tag.name) ? tag.color : `${tag.color}20`,
-                      color: selectedTags.includes(tag.name) ? 'white' : tag.color,
-                      border: `1px solid ${tag.color}40`
-                    }}
-                  >
-                    <Tag className="h-3 w-3" />
-                    <span className="font-medium">{tag.name}</span>
-                    {selectedTags.includes(tag.name) && (
-                      <div className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                        <X className="h-2.5 w-2.5 text-white" />
-                      </div>
-                    )}
-                  </button>
+                {/* All tags from database */}
+                {customTags.map((tag) => (
+                  <div key={tag.name} className="relative group">
+                    <button
+                      onClick={() => toggleTag(tag.name)}
+                      className={`flex items-center space-x-2 px-3 py-2 rounded-full text-sm font-medium transition-all duration-200 ${
+                        selectedTags.includes(tag.name)
+                          ? 'text-white shadow-md'
+                          : 'hover:shadow-sm'
+                      }`}
+                      style={{
+                        backgroundColor: selectedTags.includes(tag.name) ? tag.color : `${tag.color}20`,
+                        color: selectedTags.includes(tag.name) ? 'white' : tag.color,
+                        border: `1px solid ${tag.color}40`
+                      }}
+                    >
+                      <Tag className="h-3 w-3" />
+                      <span className="font-medium">{tag.name}</span>
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        confirmDeleteTag(tag.name)
+                      }}
+                      className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 hover:bg-red-600"
+                      title={`Delete "${tag.name}" from all internships`}
+                    >
+                      <X className="h-2.5 w-2.5 text-white" />
+                    </button>
+                  </div>
                 ))}
               </div>
             </div>
@@ -724,6 +880,7 @@ function Dashboard({ user }) {
                   internships={paginatedInternships}
                   onUpdate={updateInternship}
                   onDelete={deleteInternship}
+                  onMarkAsApplied={markAsApplied}
                   dragMode={dragMode}
                 />
               </SortableContext>
@@ -733,6 +890,7 @@ function Dashboard({ user }) {
               internships={paginatedInternships}
               onUpdate={updateInternship}
               onDelete={deleteInternship}
+              onMarkAsApplied={markAsApplied}
               dragMode={dragMode}
             />
           )
@@ -786,10 +944,18 @@ function Dashboard({ user }) {
           />
         )}
 
+        {/* Save Internship Modal */}
+        {showSaveModal && (
+          <SaveInternshipModal
+            onClose={() => setShowSaveModal(false)}
+            onSave={saveInternship}
+          />
+        )}
+
         {/* Add Tag Modal */}
         {showAddTagModal && (
-          <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
-            <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-xl max-w-md w-full mx-4">
+          <div className="fixed inset-0 flex items-start justify-center bg-black bg-opacity-50 z-50 pt-16">
+            <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-xl max-w-md w-full mx-4 mt-8">
               <div className="flex items-center justify-between mb-6">
                 <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
                   Add Custom Tag
@@ -859,6 +1025,39 @@ function Dashboard({ user }) {
           <DatabaseSetup
             onClose={() => setShowDatabaseSetup(false)}
           />
+        )}
+
+        {/* Tag Deletion Confirmation Modal */}
+        {deleteTagConfirm && (
+          <div className="fixed inset-0 flex items-start justify-center bg-black/50 backdrop-blur-sm z-50 pt-16">
+            <div className="bg-white dark:bg-gray-800 p-8 rounded-2xl shadow-2xl max-w-md w-full mx-4 border border-gray-200 dark:border-gray-700 mt-8">
+              <div className="text-center">
+                <div className="w-16 h-16 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <AlertTriangle className="h-8 w-8 text-red-500" />
+                </div>
+                <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-3">
+                  Delete Tag
+                </h3>
+                <p className="text-gray-600 dark:text-gray-400 mb-6 leading-relaxed">
+                  Are you sure you want to delete the tag <span className="font-semibold">"{deleteTagConfirm}"</span> from all internships? This action cannot be undone.
+                </p>
+                <div className="flex justify-center space-x-3">
+                  <button
+                    onClick={() => setDeleteTagConfirm(null)}
+                    className="px-6 py-3 text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-xl hover:bg-gray-200 dark:hover:bg-gray-600 transition-all duration-200 font-medium"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={() => deleteTag(deleteTagConfirm)}
+                    className="px-6 py-3 text-white bg-red-600 rounded-xl hover:bg-red-700 transition-all duration-200 font-medium"
+                  >
+                    Delete Tag
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
         )}
 
         {/* Toast */}

@@ -1,14 +1,14 @@
 import { useState, useRef } from 'react'
 import { supabase } from '../lib/supabase'
-import { 
-  User, 
-  Mail, 
-  Lock, 
-  Trash2, 
-  LogOut, 
-  Upload, 
-  Eye, 
-  EyeOff, 
+import {
+  User,
+  Mail,
+  Lock,
+  Trash2,
+  LogOut,
+  Upload,
+  Eye,
+  EyeOff,
   Check,
   AlertTriangle,
   Settings as SettingsIcon
@@ -22,7 +22,9 @@ function Settings({ user, onClose }) {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [showPasswordChange, setShowPasswordChange] = useState(false)
   const [showEmailChange, setShowEmailChange] = useState(false)
-  
+  const [showDeleteAllConfirm, setShowDeleteAllConfirm] = useState(false)
+  const [showResetConfirm, setShowResetConfirm] = useState(false)
+
   // Form states
   const [displayName, setDisplayName] = useState(user.user_metadata?.display_name || '')
   const [currentPassword, setCurrentPassword] = useState('')
@@ -32,10 +34,10 @@ function Settings({ user, onClose }) {
   const [showCurrentPassword, setShowCurrentPassword] = useState(false)
   const [showNewPassword, setShowNewPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
-  
+
   const [avatarFile, setAvatarFile] = useState(null)
   const [avatarPreview, setAvatarPreview] = useState(null)
-  
+
   const fileInputRef = useRef(null)
 
   const showToast = (message, type = 'success') => {
@@ -50,7 +52,7 @@ function Settings({ user, onClose }) {
         showToast('File size must be less than 5MB', 'error')
         return
       }
-      
+
       if (!file.type.startsWith('image/')) {
         showToast('Please select an image file', 'error')
         return
@@ -181,27 +183,122 @@ function Settings({ user, onClose }) {
   const deleteAccount = async () => {
     setLoading(true)
     try {
-      // Delete user data from internships table
-      const { error: deleteDataError } = await supabase
+      // Delete all user data first
+      const { error: deleteInternshipsError } = await supabase
         .from('internships')
         .delete()
         .eq('user_id', user.id)
 
-      if (deleteDataError) throw deleteDataError
+      if (deleteInternshipsError) {
+        console.error('Error deleting internships:', deleteInternshipsError)
+      }
+
+      const { error: deleteTagsError } = await supabase
+        .from('tags')
+        .delete()
+        .eq('user_id', user.id)
+
+      if (deleteTagsError) {
+        console.error('Error deleting tags:', deleteTagsError)
+      }
 
       // Delete the user account
       const { error } = await supabase.auth.admin.deleteUser(user.id)
-      
       if (error) throw error
 
       showToast('Account deleted successfully')
-      await supabase.auth.signOut()
+      window.location.href = '/'
     } catch (error) {
       console.error('Error deleting account:', error)
       showToast('Error deleting account. Please try again.', 'error')
     } finally {
       setLoading(false)
       setShowDeleteConfirm(false)
+    }
+  }
+
+  const deleteAllInternships = async () => {
+    setLoading(true)
+    try {
+      const { error } = await supabase
+        .from('internships')
+        .delete()
+        .eq('user_id', user.id)
+
+      if (error) {
+        console.error('Error deleting internships:', error)
+        showToast('Error deleting internships. Please try again.', 'error')
+        return
+      }
+
+      showToast('All internships deleted successfully')
+      setShowDeleteAllConfirm(false)
+      // Refresh the page to update the dashboard
+      window.location.reload()
+    } catch (error) {
+      console.error('Error deleting internships:', error)
+      showToast('Error deleting internships. Please try again.', 'error')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const resetAccount = async () => {
+    setLoading(true)
+    try {
+      // Delete all internships
+      const { error: deleteInternshipsError } = await supabase
+        .from('internships')
+        .delete()
+        .eq('user_id', user.id)
+
+      if (deleteInternshipsError) {
+        console.error('Error deleting internships:', deleteInternshipsError)
+      }
+
+      // Delete all tags
+      const { error: deleteTagsError } = await supabase
+        .from('tags')
+        .delete()
+        .eq('user_id', user.id)
+
+      if (deleteTagsError) {
+        console.error('Error deleting tags:', deleteTagsError)
+      }
+
+      // Reinitialize predefined tags
+      const predefinedTags = [
+        { name: 'Dream Company', color: '#ef4444' },
+        { name: 'Priority', color: '#f59e0b' },
+        { name: 'Tech', color: '#3b82f6' },
+        { name: 'Finance', color: '#10b981' },
+        { name: 'Remote', color: '#8b5cf6' },
+        { name: 'Startup', color: '#ec4899' }
+      ]
+
+      const tagsToInsert = predefinedTags.map(tag => ({
+        name: tag.name,
+        color: tag.color,
+        user_id: user.id
+      }))
+
+      const { error: insertTagsError } = await supabase
+        .from('tags')
+        .insert(tagsToInsert)
+
+      if (insertTagsError) {
+        console.error('Error inserting predefined tags:', insertTagsError)
+      }
+
+      showToast('Account reset successfully')
+      setShowResetConfirm(false)
+      // Refresh the page to update the dashboard
+      window.location.reload()
+    } catch (error) {
+      console.error('Error resetting account:', error)
+      showToast('Error resetting account. Please try again.', 'error')
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -277,7 +374,7 @@ function Settings({ user, onClose }) {
                     <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
                       Profile Information
                     </h3>
-                    
+
                     <div className="space-y-4">
                       {/* Avatar Upload */}
                       <div>
@@ -288,15 +385,15 @@ function Settings({ user, onClose }) {
                           <div className="relative">
                             <div className="w-20 h-20 rounded-full bg-primary-600 flex items-center justify-center">
                               {avatarPreview ? (
-                                <img 
-                                  src={avatarPreview} 
-                                  alt="Avatar preview" 
+                                <img
+                                  src={avatarPreview}
+                                  alt="Avatar preview"
                                   className="w-20 h-20 rounded-full object-cover"
                                 />
                               ) : user.user_metadata?.avatar_url ? (
-                                <img 
-                                  src={user.user_metadata.avatar_url} 
-                                  alt="Avatar" 
+                                <img
+                                  src={user.user_metadata.avatar_url}
+                                  alt="Avatar"
                                   className="w-20 h-20 rounded-full object-cover"
                                 />
                               ) : (
@@ -381,7 +478,7 @@ function Settings({ user, onClose }) {
                     <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
                       Security Settings
                     </h3>
-                    
+
                     <div className="space-y-4">
                       {/* Change Password */}
                       <div>
@@ -399,7 +496,7 @@ function Settings({ user, onClose }) {
                             Change Password
                           </button>
                         </div>
-                        
+
                         {showPasswordChange && (
                           <div className="mt-4 space-y-3 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
                             <div>
@@ -504,7 +601,7 @@ function Settings({ user, onClose }) {
                     <h3 className="text-lg font-semibold text-red-900 dark:text-red-100 mb-4">
                       Danger Zone
                     </h3>
-                    
+
                     <div className="space-y-4">
                       {/* Sign Out */}
                       <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
@@ -519,6 +616,38 @@ function Settings({ user, onClose }) {
                           className="btn-secondary"
                         >
                           Sign Out
+                        </button>
+                      </div>
+
+                      {/* Delete All Internships */}
+                      <div className="flex items-center justify-between p-4 bg-orange-50 dark:bg-orange-900/20 rounded-lg border border-orange-200 dark:border-orange-800">
+                        <div>
+                          <h4 className="font-medium text-orange-900 dark:text-orange-100">Delete All Internships</h4>
+                          <p className="text-sm text-orange-700 dark:text-orange-300">
+                            Permanently delete all your internship data
+                          </p>
+                        </div>
+                        <button
+                          onClick={() => setShowDeleteAllConfirm(true)}
+                          className="bg-orange-600 hover:bg-orange-700 text-white font-medium py-2 px-4 rounded-lg transition-colors"
+                        >
+                          Delete All
+                        </button>
+                      </div>
+
+                      {/* Reset Account */}
+                      <div className="flex items-center justify-between p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border border-yellow-200 dark:border-yellow-800">
+                        <div>
+                          <h4 className="font-medium text-yellow-900 dark:text-yellow-100">Reset Account</h4>
+                          <p className="text-sm text-yellow-700 dark:text-yellow-300">
+                            Clear all data and start fresh with default tags
+                          </p>
+                        </div>
+                        <button
+                          onClick={() => setShowResetConfirm(true)}
+                          className="bg-yellow-600 hover:bg-yellow-700 text-white font-medium py-2 px-4 rounded-lg transition-colors"
+                        >
+                          Reset Account
                         </button>
                       </div>
 
@@ -581,9 +710,81 @@ function Settings({ user, onClose }) {
           </div>
         )}
 
+        {/* Delete All Internships Confirmation Modal */}
+        {showDeleteAllConfirm && (
+          <div className="modal-overlay" onClick={() => setShowDeleteAllConfirm(false)}>
+            <div className="modal-content max-w-md" onClick={(e) => e.stopPropagation()}>
+              <div className="p-6">
+                <div className="flex items-center space-x-3 mb-4">
+                  <div className="p-2 bg-orange-100 dark:bg-orange-900/20 rounded-full">
+                    <AlertTriangle className="h-6 w-6 text-orange-600 dark:text-orange-400" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                    Delete All Internships
+                  </h3>
+                </div>
+                <p className="text-gray-600 dark:text-gray-400 mb-6">
+                  Are you sure you want to delete all your internships? This action cannot be undone and will permanently delete all your internship data.
+                </p>
+                <div className="flex space-x-3">
+                  <button
+                    onClick={deleteAllInternships}
+                    disabled={loading}
+                    className="flex-1 bg-orange-600 hover:bg-orange-700 text-white font-medium py-2 px-4 rounded-lg transition-colors disabled:opacity-50"
+                  >
+                    {loading ? 'Deleting...' : 'Delete All Internships'}
+                  </button>
+                  <button
+                    onClick={() => setShowDeleteAllConfirm(false)}
+                    className="flex-1 btn-secondary"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Reset Account Confirmation Modal */}
+        {showResetConfirm && (
+          <div className="modal-overlay" onClick={() => setShowResetConfirm(false)}>
+            <div className="modal-content max-w-md" onClick={(e) => e.stopPropagation()}>
+              <div className="p-6">
+                <div className="flex items-center space-x-3 mb-4">
+                  <div className="p-2 bg-yellow-100 dark:bg-yellow-900/20 rounded-full">
+                    <AlertTriangle className="h-6 w-6 text-yellow-600 dark:text-yellow-400" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                    Reset Account
+                  </h3>
+                </div>
+                <p className="text-gray-600 dark:text-gray-400 mb-6">
+                  Are you sure you want to reset your account? This will delete all internships and tags, then reinitialize with default tags. This action cannot be undone.
+                </p>
+                <div className="flex space-x-3">
+                  <button
+                    onClick={resetAccount}
+                    disabled={loading}
+                    className="flex-1 bg-yellow-600 hover:bg-yellow-700 text-white font-medium py-2 px-4 rounded-lg transition-colors disabled:opacity-50"
+                  >
+                    {loading ? 'Resetting...' : 'Reset Account'}
+                  </button>
+                  <button
+                    onClick={() => setShowResetConfirm(false)}
+                    className="flex-1 btn-secondary"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {toast.show && (
-          <Toast 
-            message={toast.message} 
+          <Toast
+            message={toast.message}
             isVisible={toast.show}
             onClose={() => setToast({ show: false, message: '', type: 'success' })}
           />
@@ -593,4 +794,4 @@ function Settings({ user, onClose }) {
   )
 }
 
-export default Settings 
+export default Settings
